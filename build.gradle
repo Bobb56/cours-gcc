@@ -1,0 +1,46 @@
+plugins {
+    id 'java'
+    id 'antlr'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile) {
+    options.release = 21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    antlr "org.antlr:antlr4:4.11.1"
+}
+
+sourceSets {
+    test {
+        java {
+            srcDirs = ["src/test/java"]
+        }
+    }
+}
+
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed"
+    }
+}
+
+tasks.generateGrammarSource {
+    maxHeapSize = "64m"
+    outputDirectory = file("src/main/java/antlr/")
+    arguments += ["-visitor"]
+}
