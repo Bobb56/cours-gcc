@@ -6,9 +6,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SymbolTable {
-	protected HashMap<ArrayList<Integer>, SymbolTableLevel> levelTable;
+	/**
+	 * On identifie le chemin associé à un scope par une liste d'entiers
+	 * représentant pour chacun la direction prise dans chaque noeud de
+	 * l'arbre lors de l'accès au scope
+	 */
 	protected ArrayList<Integer> currentPath;
+
+	/**
+	 * Cette table de hachage associe un SymbolTableLevel à chaque chemin de scope.
+	 */
+	protected HashMap<ArrayList<Integer>, SymbolTableLevel> levelTable;
+
+	/**
+	 *  Cet entier stocke le nombre de fils du noeud supérieur -1
+	 */
 	protected int currentScope;
+
+	/**
+	 *  Cette table de hachage associe un contexte de règle de parser au chemin identifiant un scope
+	 */
+	protected HashMap<ParserRuleContext, ArrayList<Integer>> contextPathMap;
+
 	public SymbolTable() {
 		levelTable = new HashMap<ArrayList<Integer>, SymbolTableLevel>();
 		currentPath = new ArrayList<Integer>();
