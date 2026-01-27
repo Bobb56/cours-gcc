@@ -56,6 +56,7 @@ public class SymbolTable {
 	
 	public SymbolTableEntry lookup(String name) {
 		return levelTable.get(currentPath).get(name);
+		// TODO: try/catch de l'erreur et return un symbolTableEntry caractéristique
 	}
 	
 }
