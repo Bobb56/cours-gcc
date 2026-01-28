@@ -115,6 +115,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
 
     @Override
     public Boolean visitIdNode(SimpleCParser.IdNodeContext ctx) {
+        System.out.println(ctx.name.getText() + " : " + symbolTable.lookup(ctx.name.getText()));
         return symbolTable.lookup(ctx.name.getText()) != null;
     }
 
