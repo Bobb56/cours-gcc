@@ -16,16 +16,15 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     }
 
     public Boolean visitFunctionDefinition(SimpleCParser.FunctionDefinitionContext ctx) {
+        symbolTable.insert(ctx.name.getText());
+
         boolean curState = true;
         symbolTable.initializeScope(ctx);
 
-        if (!ctx.args.isEmpty()) {
-            int num_args = ctx.args.size();
-            for (ParseTree c : ctx.args.subList(0, num_args - 1)) {
-                curState = (curState && this.visit(c));
-            }
+        int num_args = ctx.args.size();
+        for (ParseTree c : ctx.args) {
+            curState = (curState && this.visit(c));
         }
-
         curState = (curState && this.visit(ctx.body));
         symbolTable.finalizeScope();
         return curState;
@@ -61,7 +60,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
 
     @Override
     public Boolean visitReturnStatement(SimpleCParser.ReturnStatementContext ctx) {
-        return true;
+        return visit(ctx.expr);
     }
 
     @Override
@@ -104,7 +103,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
 
     @Override
     public Boolean visitIdNode(SimpleCParser.IdNodeContext ctx) {
-        return symbolTable.lookup(ctx.name.getText()) == null;
+        return symbolTable.lookup(ctx.name.getText()) != null;
     }
 
     @Override
@@ -127,10 +126,10 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
 
     @Override
     public Boolean visitFunctionCall(SimpleCParser.FunctionCallContext ctx) {
-        boolean curState = (symbolTable.lookup(ctx.name.getText()) == null);
+        boolean curState = (symbolTable.lookup(ctx.name.getText()) != null);
 
-        for (int child = 0; child < ctx.args.size(); child++) {
-            curState = (curState && this.visit(ctx.args.get(child)));
+        for (ParseTree child : ctx.args) {
+            curState = (curState && this.visit(child));
         }
         return curState;
     }
@@ -160,15 +159,9 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
 
     @Override
     public Boolean visitIfStatement(SimpleCParser.IfStatementContext ctx) {
-        if (ctx.elseBlock != null) {
-            return this.visit(ctx.expr)
-                    && this.visit(ctx.ifBlock)
-                    && this.visit(ctx.elseBlock);
-        }
-        else {
-            return this.visit(ctx.expr)
-                    && this.visit(ctx.ifBlock);
-        }
+        return this.visit(ctx.expr)
+                && this.visit(ctx.ifBlock)
+                && (ctx.elseBlock == null || this.visit(ctx.elseBlock));
     }
 
     @Override
