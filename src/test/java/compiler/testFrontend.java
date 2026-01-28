@@ -1,18 +1,26 @@
 package compiler;
 
 
+import compiler.frontend.SymbolChecker;
+import compiler.frontend.SymbolTable;
+import compiler.frontend.SymbolTableLevel;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.jupiter.api.Test;
 
 import ir.core.IRTopLevel;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 
 class testFrontend {
 
 	private void testPattern(String path) {
 		String contentInit = Compiler.readFile(path);
 		ParseTree tree = Compiler.parse(contentInit);
-		IRTopLevel top = Compiler.frontend(tree);
-		assert(true);//Ok if no exception before
+		SymbolChecker symCheck = new SymbolChecker();
+		Boolean check = symCheck.visit(tree);
+		HashMap<ArrayList<Integer>, SymbolTableLevel> levelTable = symCheck.getTable().getLevelTable();
+		assert(check);//Ok if no exception before
 	}
 	
 	@Test

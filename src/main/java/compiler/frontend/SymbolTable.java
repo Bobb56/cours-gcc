@@ -58,5 +58,9 @@ public class SymbolTable {
 		return levelTable.get(currentPath).get(name);
 		// TODO: try/catch de l'erreur et return un symbolTableEntry caractéristique
 	}
+
+	public HashMap<ArrayList<Integer>, SymbolTableLevel> getLevelTable() {
+		return levelTable;
+	}
 	
 }

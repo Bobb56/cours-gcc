@@ -8,6 +8,15 @@ import antlr.SimpleCParser;
 public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     protected SymbolTable symbolTable;
 
+    public SymbolChecker() {
+        super();
+        this.symbolTable = new SymbolTable();
+    }
+
+    public SymbolTable getTable() {
+        return symbolTable;
+    }
+
     public Boolean visitTranslationUnit(SimpleCParser.TranslationUnitContext ctx) {
         boolean curState = true;
         for (ParseTree c : ctx.children)
