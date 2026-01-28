@@ -36,11 +36,9 @@ public class SymbolTable {
 	public SymbolTableLevel initializeScope(ParserRuleContext ctx) {
 		currentScope++;
 		currentPath.add(currentScope);
-		System.out.println("Init scope current path : " + currentPath);
 		List<Integer> currentList = new ArrayList<Integer>(currentPath);
 		levelTable.put(currentList, new SymbolTableLevel());
 		currentScope = -1;
-		System.out.println(Collections.singletonList(levelTable));
 		return levelTable.get(currentPath);
 	}
 	
@@ -50,35 +48,25 @@ public class SymbolTable {
 	}
 	
 	public SymbolTableEntry insert(String name) {
-		System.out.println("\nINSERT " + name + " at current path: " + currentPath);
 		SymbolTableLevel level = levelTable.get(currentPath);
-		System.out.println("get level " + level);
 		SymbolTableEntry entry = new SymbolTableEntry(name);
 		level.put(name, entry);
 		return entry;
 	}
 	
 	public SymbolTableEntry lookup(String name) {
-		System.out.println("\nLOOKING up for " + name);
-		System.out.println(Collections.singletonList(levelTable));
-
 		SymbolTableEntry ret;
 		for (int i=currentPath.size() ; i > 0 ; i--) {
 			List<Integer> subl = currentPath.subList(0, i);
 			SymbolTableLevel level = levelTable.get(subl);
-			System.out.println("Lookup level " + subl);
 
 			if (level != null) {
 				ret = level.get(name);
-				System.out.println("Lookup " + ret);
 				if (ret != null)
 					return ret;
 			}
-			else
-				System.out.println("!!! LEVEL NULL");
 		}
 		return null;
-		// TODO: try/catch de l'erreur et return un symbolTableEntry caractéristique
 	}
 
 	public HashMap<List<Integer>, SymbolTableLevel> getLevelTable() {
