@@ -5,13 +5,13 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import antlr.SimpleCBaseVisitor;
 import antlr.SimpleCParser;
 
-public class SimpleCPrinter extends SimpleCBaseVisitor<> {
+public class SimpleCPrinter extends SimpleCBaseVisitor<String> {
 
-	public void visitTranslationUnit(SimpleCParser.TranslationUnitContext ctx) {
+	public String visitTranslationUnit(SimpleCParser.TranslationUnitContext ctx) {
 		StringBuilder result = new StringBuilder();
 		for (ParseTree c : ctx.children)
 			result.append("\n").append(this.visit(c));
-
+		return result.toString();
 	}
 
 	public String visitFunctionDefinition(SimpleCParser.FunctionDefinitionContext ctx) {
