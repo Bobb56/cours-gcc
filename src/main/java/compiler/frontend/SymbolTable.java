@@ -2,9 +2,7 @@ package compiler.frontend;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class SymbolTable {
 	/**
@@ -17,7 +15,7 @@ public class SymbolTable {
 	/**
 	 * Cette table de hachage associe un SymbolTableLevel à chaque chemin de scope.
 	 */
-	protected HashMap<ArrayList<Integer>, SymbolTableLevel> levelTable;
+	protected HashMap<List<Integer>, SymbolTableLevel> levelTable;
 
 	/**
 	 *  Cet entier stocke le nombre de fils du noeud supérieur -1
@@ -30,7 +28,7 @@ public class SymbolTable {
 	protected HashMap<ParserRuleContext, ArrayList<Integer>> contextPathMap;
 
 	public SymbolTable() {
-		levelTable = new HashMap<ArrayList<Integer>, SymbolTableLevel>();
+		levelTable = new HashMap<List<Integer>, SymbolTableLevel>();
 		currentPath = new ArrayList<Integer>();
 		currentScope = -1;
 	}
@@ -38,8 +36,11 @@ public class SymbolTable {
 	public SymbolTableLevel initializeScope(ParserRuleContext ctx) {
 		currentScope++;
 		currentPath.add(currentScope);
-		levelTable.put(currentPath, new SymbolTableLevel());
+		System.out.println("Init scope current path : " + currentPath);
+		List<Integer> currentList = new ArrayList<Integer>(currentPath);
+		levelTable.put(currentList, new SymbolTableLevel());
 		currentScope = -1;
+		System.out.println(Collections.singletonList(levelTable));
 		return levelTable.get(currentPath);
 	}
 	
@@ -49,29 +50,38 @@ public class SymbolTable {
 	}
 	
 	public SymbolTableEntry insert(String name) {
+		System.out.println("\nINSERT " + name + " at current path: " + currentPath);
 		SymbolTableLevel level = levelTable.get(currentPath);
+		System.out.println("get level " + level);
 		SymbolTableEntry entry = new SymbolTableEntry(name);
 		level.put(name, entry);
 		return entry;
 	}
 	
 	public SymbolTableEntry lookup(String name) {
+		System.out.println("\nLOOKING up for " + name);
+		System.out.println(Collections.singletonList(levelTable));
+
 		SymbolTableEntry ret;
 		for (int i=currentPath.size() ; i > 0 ; i--) {
 			List<Integer> subl = currentPath.subList(0, i);
 			SymbolTableLevel level = levelTable.get(subl);
+			System.out.println("Lookup level " + subl);
 
 			if (level != null) {
 				ret = level.get(name);
+				System.out.println("Lookup " + ret);
 				if (ret != null)
 					return ret;
 			}
+			else
+				System.out.println("!!! LEVEL NULL");
 		}
 		return null;
 		// TODO: try/catch de l'erreur et return un symbolTableEntry caractéristique
 	}
 
-	public HashMap<ArrayList<Integer>, SymbolTableLevel> getLevelTable() {
+	public HashMap<List<Integer>, SymbolTableLevel> getLevelTable() {
 		return levelTable;
 	}
 	

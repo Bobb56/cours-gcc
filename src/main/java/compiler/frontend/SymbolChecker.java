@@ -5,6 +5,8 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import antlr.SimpleCBaseVisitor;
 import antlr.SimpleCParser;
 
+import java.util.Collections;
+
 public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     protected SymbolTable symbolTable;
 
