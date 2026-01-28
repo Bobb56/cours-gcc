@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class SymbolTable {
 	/**
@@ -55,7 +56,18 @@ public class SymbolTable {
 	}
 	
 	public SymbolTableEntry lookup(String name) {
-		return levelTable.get(currentPath).get(name);
+		SymbolTableEntry ret;
+		for (int i=currentPath.size() ; i > 0 ; i--) {
+			List<Integer> subl = currentPath.subList(0, i);
+			SymbolTableLevel level = levelTable.get(subl);
+
+			if (level != null) {
+				ret = level.get(name);
+				if (ret != null)
+					return ret;
+			}
+		}
+		return null;
 		// TODO: try/catch de l'erreur et return un symbolTableEntry caractéristique
 	}
 

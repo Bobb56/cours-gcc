@@ -18,9 +18,11 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     }
 
     public Boolean visitTranslationUnit(SimpleCParser.TranslationUnitContext ctx) {
+        symbolTable.initializeScope(ctx);
         boolean curState = true;
         for (ParseTree c : ctx.children)
             curState = (curState && this.visit(c));
+        symbolTable.finalizeScope();
         return curState;
     }
 
@@ -30,7 +32,6 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
         boolean curState = true;
         symbolTable.initializeScope(ctx);
 
-        int num_args = ctx.args.size();
         for (ParseTree c : ctx.args) {
             curState = (curState && this.visit(c));
         }
