@@ -20,9 +20,13 @@ def deep_for_loop(depth):
     return for_loop(depth, "int a = 42;\n") if depth == 0 else for_loop(depth, deep_for_loop(depth-1))
 
 def main():
-    depth = int(sys.argv[1])
+    for i in range(150):
+        depth = int(sys.argv[1])
 
-    header = f"int {make_var_name(depth+1)} = 50;\n"
-    print(header + deep_for_loop(depth))
+        print("int main() {\n int " + make_var_name(depth+1) + " = 50;\n")
+        print(deep_for_loop(depth))
+        print("}\n")
+
+
 
 main()

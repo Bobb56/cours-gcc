@@ -63,4 +63,9 @@ class testFrontend {
 	void testParserPrint() {
 		testPattern("src/test/resources/print.sc", false);
 	}
+
+	@Test
+	void testParserPerf() {
+		testPattern("src/test/resources/perf.sc", true);
+	}
 }
