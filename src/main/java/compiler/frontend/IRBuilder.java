@@ -3,6 +3,7 @@ package compiler.frontend;
 import java.util.ArrayList;
 
 import ir.terminator.IRCondBr;
+import ir.terminator.IRTerminator;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import antlr.SimpleCBaseVisitor;
@@ -128,13 +129,47 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitWhileStatement(SimpleCParser.WhileStatementContext ctx) {
-		BuilderResult exprResult = visit(ctx.expr);
-		BuilderResult blockResult = visit(ctx.whileBlock);
-		IRCondBr newInstr = new IRCondBr(exprResult.value, blockResult.entry, blockResult.exit);
-		currentBlock.addOperation(newInstr);
+		IRBlock inBlock = new IRBlock(currentFunction);
+		IRBlock outBlock = new IRBlock(currentFunction);
+		currentBlock = inBlock;
 
-		BuilderResult result = new BuilderResult(blockResult.hasBlock, exprResult.entry, blockResult.exit, null);
-		return result;
+		BuilderResult exprResult = visit(ctx.expr);
+		BuilderResult whileResult = visit(ctx.whileBlock);
+
+		IRCondBr condTerm = new IRCondBr(exprResult.value, whileResult.entry, outBlock);
+		inBlock.addTerminator(condTerm);
+
+		// whileBlock is currentBlock
+		currentBlock.addTerminator(new IRGoto(inBlock));
+
+		return (new BuilderResult(true, inBlock, outBlock, null));
+	}
+
+	@Override
+	public BuilderResult visitIfStatement(SimpleCParser.IfStatementContext ctx) {
+		IRBlock inBlock = new IRBlock(currentFunction);
+		IRBlock outBlock = new IRBlock(currentFunction);
+		currentBlock = inBlock;
+
+		BuilderResult exprResult = visit(ctx.expr);
+		BuilderResult ifResult = visit(ctx.ifBlock);
+		IRBlock ifBlock = currentBlock;
+
+		if(ctx.elseBlock != null) {
+			BuilderResult elseResult = visit(ctx.elseBlock);
+			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, elseResult.entry);
+			inBlock.addTerminator(condTerm);
+			// elseBlock is currentBlock
+			currentBlock.addTerminator(new IRGoto(outBlock));
+		}
+		else {
+			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, outBlock);
+			inBlock.addTerminator(condTerm);
+		}
+
+		ifBlock.addTerminator(new IRGoto(outBlock));
+
+		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
 	
 	
