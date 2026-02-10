@@ -31,11 +31,11 @@ assign : var=IDENTIFIER '=' expr=expression;
 
 assignStatement : expr=assign ';';
 
-ifStatement : 'if' '(' expr=expression ')' ifBlock=blockStatement ('else' elseBlock=statement)?;
+ifStatement : 'if' '(' expr=expression ')' ifBlock=blockStatement ('else' elseBlock=blockStatement)?;
 
-whileStatement : 'while' '(' expr=expression ')' whileBlock=statement;
+whileStatement : 'while' '(' expr=expression ')' whileBlock=blockStatement;
 
-forStatement : 'for' '(' expr1=declStatement expr2=expression ';' expr3=assign ')' forBlock=statement;
+forStatement : 'for' '(' expr1=declStatement expr2=expression ';' expr3=assign ')' forBlock=blockStatement;
 
 
 returnStatement : 'return' expr=expression?';';
