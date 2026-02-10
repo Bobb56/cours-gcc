@@ -42,10 +42,9 @@ public class IRBlock implements IRVisitableObject<Object> {
     
     public void removeTerminator() {
     	IROperation t = this.operations.getLast();
-    	if (t instanceof IRTerminator) {
-            for (IRBlock successor : ((IRTerminator) t).getSuccessors())
+    	if (t instanceof IRTerminator)
+            for (IRBlock successor: ((IRTerminator)t).getSuccessors())
                 successor.predecessors.remove(this);
-        }
     	this.operations.removeLast();
     }
 

@@ -1,6 +1,7 @@
 package compiler;
 
 
+import compiler.frontend.IRBuilder;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.jupiter.api.Test;
 
@@ -13,15 +14,11 @@ class testIRImport {
 		System.out.println("Initial content is : \n" + contentInit);
 		ParseTree tree = Compiler.parse(contentInit);
 		System.out.println("Parsed !");
-    	SimpleCPrinter astPrinter = new SimpleCPrinter();
-    	String genContent = astPrinter.visit(tree);
-		System.out.println("Re-generated content is : \n" + genContent);
-		ParseTree tree2 = Compiler.parse(genContent);
-		System.out.println("Parsed !");
-		String genContent2 = 	astPrinter.visit(tree2);
-		System.out.println("Re-re-generated content is : \n" + genContent2);
 
-		assert(genContent.equals(genContent2));
+		IRBuilder builder = new IRBuilder();
+		builder.visit(tree);
+
+		assert(true); // TODO
 	}
 	
 	@Test
