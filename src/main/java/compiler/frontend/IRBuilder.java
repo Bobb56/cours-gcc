@@ -2,6 +2,7 @@ package compiler.frontend;
 
 import java.util.ArrayList;
 
+import ir.terminator.IRCondBr;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import antlr.SimpleCBaseVisitor;
@@ -100,7 +101,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	
 	@Override
 	public BuilderResult visitStatement(StatementContext ctx) {
-		return this.visit(ctx.children.get(0));
+		return this.visit(ctx.children.getFirst());
 	}
 	
 	@Override
@@ -124,12 +125,23 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		
 		return new BuilderResult(true, in, current, null);
 	}
+
+	@Override
+	public BuilderResult visitWhileStatement(SimpleCParser.WhileStatementContext ctx) {
+		BuilderResult exprResult = visit(ctx.expr);
+		BuilderResult blockResult = visit(ctx.whileBlock);
+		IRCondBr newInstr = new IRCondBr(exprResult.value, blockResult.entry, blockResult.exit);
+		currentBlock.addOperation(newInstr);
+
+		BuilderResult result = new BuilderResult(blockResult.hasBlock, exprResult.entry, blockResult.exit, null);
+		return result;
+	}
 	
 	
 	/****************************************************************************
 	 *  Return/call statements
 	 * 
-	 ****************************************************************************/ 
+	 ****************************************************************************/
 	
 	@Override
 	public BuilderResult visitReturnStatement(ReturnStatementContext ctx) {
@@ -169,6 +181,8 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	 ****************************************************************************/ 
 
 	//TODO: varDecl / varDef / varAssign
+
+
 	
 	@Override
 	public BuilderResult visitAddExpr(AddExprContext ctx) {
