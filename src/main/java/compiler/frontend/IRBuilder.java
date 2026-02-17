@@ -1,6 +1,7 @@
 package compiler.frontend;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import ir.terminator.IRCondBr;
 import ir.terminator.IRTerminator;
@@ -28,6 +29,11 @@ import antlr.SimpleCParser.StatementContext;
 import antlr.SimpleCParser.SubExprContext;
 import antlr.SimpleCParser.TypeContext;
 import antlr.SimpleCParser.UintTypeContext;
+import antlr.SimpleCParser.WhileStatementContext;
+import antlr.SimpleCParser.ForStatementContext;
+import antlr.SimpleCParser.IfStatementContext;
+import antlr.SimpleCParser.DeclStatementContext;
+import antlr.SimpleCParser.AssignStatementContext;
 import ir.core.IRBlock;
 import ir.core.IRFunction;
 import ir.core.IRTopLevel;
@@ -50,9 +56,8 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	IRFunction currentFunction = null;
 	IRBlock currentBlock = null;
 	SymbolTable symbolTable;
-	
+	protected HashMap<IRBlock, Boolean> sealedBlocks;
 
-	
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
@@ -60,6 +65,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 	
 	public IRBuilder() {
+		sealedBlocks = new HashMap<IRBlock, Boolean>();
 		top = new IRTopLevel();
 		symbolTable = new SymbolTable();
 	}
@@ -72,6 +78,11 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			return IRType.UINT;
 		}
 		return null;
+	}
+
+	protected void seal(IRBlock b) {
+		// TODO: seal blocks au bon moment
+		sealedBlocks.put(b, true);
 	}
 
 	@Override
@@ -128,13 +139,13 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 
 	@Override
-	public BuilderResult visitWhileStatement(SimpleCParser.WhileStatementContext ctx) {
+	public BuilderResult visitWhileStatement(WhileStatementContext ctx) {
 		IRBlock inBlock = new IRBlock(currentFunction);
 		IRBlock outBlock = new IRBlock(currentFunction);
 		currentBlock = inBlock;
 
-		BuilderResult exprResult = visit(ctx.expr);
-		BuilderResult whileResult = visit(ctx.whileBlock);
+		BuilderResult exprResult = this.visit(ctx.expr);
+		BuilderResult whileResult = this.visit(ctx.whileBlock);
 
 		IRCondBr condTerm = new IRCondBr(exprResult.value, whileResult.entry, outBlock);
 		inBlock.addTerminator(condTerm);
@@ -146,17 +157,17 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 
 	@Override
-	public BuilderResult visitIfStatement(SimpleCParser.IfStatementContext ctx) {
+	public BuilderResult visitIfStatement(IfStatementContext ctx) {
 		IRBlock inBlock = new IRBlock(currentFunction);
 		IRBlock outBlock = new IRBlock(currentFunction);
 		currentBlock = inBlock;
 
-		BuilderResult exprResult = visit(ctx.expr);
-		BuilderResult ifResult = visit(ctx.ifBlock);
+		BuilderResult exprResult = this.visit(ctx.expr);
+		BuilderResult ifResult = this.visit(ctx.ifBlock);
 		IRBlock ifBlock = currentBlock;
 
 		if(ctx.elseBlock != null) {
-			BuilderResult elseResult = visit(ctx.elseBlock);
+			BuilderResult elseResult = this.visit(ctx.elseBlock);
 			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, elseResult.entry);
 			inBlock.addTerminator(condTerm);
 			// elseBlock is currentBlock
@@ -168,6 +179,34 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		}
 
 		ifBlock.addTerminator(new IRGoto(outBlock));
+
+		return (new BuilderResult(true, inBlock, outBlock, null));
+	}
+
+	public BuilderResult visitForStatement(ForStatementContext ctx) {
+		IRBlock inBlock = new IRBlock(currentFunction);
+		IRBlock condBlock = new IRBlock(currentFunction);
+		IRBlock outBlock = new IRBlock(currentFunction);
+		currentBlock = inBlock;
+
+		// DeclStatement
+		this.visit(ctx.expr1);
+
+		// Now we switch to condBlock
+		currentBlock = condBlock;
+		BuilderResult exprResult = this.visit(ctx.expr2);
+
+		BuilderResult forResult = this.visit(ctx.forBlock);
+
+		// Incrementation
+		this.visit(ctx.expr3);
+
+		IRCondBr condTerm = new IRCondBr(exprResult.value, forResult.entry, outBlock);
+		condBlock.addTerminator(condTerm);
+
+		// forBlock is currentBlock
+		currentBlock.addTerminator(new IRGoto(condBlock));
+		inBlock.addTerminator(new IRGoto(condBlock));
 
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
@@ -213,7 +252,24 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	/****************************************************************************
 	 *  Non control flow statements
 	 * 
-	 ****************************************************************************/ 
+	 ****************************************************************************/
+
+	// TODO A REFAIRE
+	public BuilderResult visitDeclStatement(DeclStatementContext ctx) {
+		// Rien de spécial à faire, on déclare juste l'existence de la variable
+		BuilderResult res = ctx.expr.accept(this);
+		return new BuilderResult(false, null, null, res.value);
+	}
+
+	public BuilderResult visitAssignStatement(AssignStatementContext ctx) {
+		BuilderResult res = ctx.expr.accept(this);
+		// Ajout à la table des symboles
+		//this.symbolTable.getLevelTable().get()
+		return new BuilderResult(false, null, null, res.value);
+	}
+
+	// DefStatement ??
+
 
 	//TODO: varDecl / varDef / varAssign
 
