@@ -10,17 +10,12 @@ public class SymbolTable {
 	 * représentant pour chacun la direction prise dans chaque noeud de
 	 * l'arbre lors de l'accès au scope
 	 */
-	protected ArrayList<Integer> currentPath;
+	protected BlockVisitor currentPath;
 
 	/**
 	 * Cette table de hachage associe un SymbolTableLevel à chaque chemin de scope.
 	 */
 	protected HashMap<List<Integer>, SymbolTableLevel> levelTable;
-
-	/**
-	 *  Cet entier stocke le nombre de fils du noeud supérieur -1
-	 */
-	protected int currentScope;
 
 	/**
 	 *  Cette table de hachage associe un contexte de règle de parser au chemin identifiant un scope
@@ -29,26 +24,21 @@ public class SymbolTable {
 
 	public SymbolTable() {
 		levelTable = new HashMap<List<Integer>, SymbolTableLevel>();
-		currentPath = new ArrayList<Integer>();
-		currentScope = -1;
+		currentPath = new BlockVisitor();
 	}
 	
 	public SymbolTableLevel initializeScope(ParserRuleContext ctx) {
-		currentScope++;
-		currentPath.add(currentScope);
-		List<Integer> currentList = new ArrayList<Integer>(currentPath);
-		levelTable.put(currentList, new SymbolTableLevel());
-		currentScope = -1;
-		return levelTable.get(currentPath);
+		currentPath.enterBlock();
+		levelTable.put(currentPath.copy(), new SymbolTableLevel());
+		return levelTable.get(currentPath.get());
 	}
 	
 	public void finalizeScope() {
-		currentScope = currentPath.getLast();
-		currentPath.removeLast();
+		currentPath.exitBlock();
 	}
 	
 	public SymbolTableEntry insert(String name) {
-		SymbolTableLevel level = levelTable.get(currentPath);
+		SymbolTableLevel level = levelTable.get(currentPath.get());
 		SymbolTableEntry entry = new SymbolTableEntry(name);
 		level.put(name, entry);
 		return entry;
@@ -56,8 +46,8 @@ public class SymbolTable {
 	
 	public SymbolTableEntry lookup(String name) {
 		SymbolTableEntry ret;
-		for (int i=currentPath.size() ; i > 0 ; i--) {
-			List<Integer> subl = currentPath.subList(0, i);
+		for (int i=currentPath.get().size() ; i > 0 ; i--) {
+			List<Integer> subl = currentPath.get().subList(0, i);
 			SymbolTableLevel level = levelTable.get(subl);
 
 			if (level != null) {
