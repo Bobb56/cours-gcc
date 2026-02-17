@@ -796,15 +796,15 @@ public class SimpleCParser extends Parser {
 	public static class IfStatementContext extends ParserRuleContext {
 		public ExpressionContext expr;
 		public BlockStatementContext ifBlock;
-		public StatementContext elseBlock;
+		public BlockStatementContext elseBlock;
 		public ExpressionContext expression() {
 			return getRuleContext(ExpressionContext.class,0);
 		}
-		public BlockStatementContext blockStatement() {
-			return getRuleContext(BlockStatementContext.class,0);
+		public List<BlockStatementContext> blockStatement() {
+			return getRuleContexts(BlockStatementContext.class);
 		}
-		public StatementContext statement() {
-			return getRuleContext(StatementContext.class,0);
+		public BlockStatementContext blockStatement(int i) {
+			return getRuleContext(BlockStatementContext.class,i);
 		}
 		public IfStatementContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -850,7 +850,7 @@ public class SimpleCParser extends Parser {
 				setState(103);
 				match(T__13);
 				setState(104);
-				((IfStatementContext)_localctx).elseBlock = statement();
+				((IfStatementContext)_localctx).elseBlock = blockStatement();
 				}
 			}
 
@@ -870,12 +870,12 @@ public class SimpleCParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class WhileStatementContext extends ParserRuleContext {
 		public ExpressionContext expr;
-		public StatementContext whileBlock;
+		public BlockStatementContext whileBlock;
 		public ExpressionContext expression() {
 			return getRuleContext(ExpressionContext.class,0);
 		}
-		public StatementContext statement() {
-			return getRuleContext(StatementContext.class,0);
+		public BlockStatementContext blockStatement() {
+			return getRuleContext(BlockStatementContext.class,0);
 		}
 		public WhileStatementContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -911,7 +911,7 @@ public class SimpleCParser extends Parser {
 			setState(110);
 			match(T__2);
 			setState(111);
-			((WhileStatementContext)_localctx).whileBlock = statement();
+			((WhileStatementContext)_localctx).whileBlock = blockStatement();
 			}
 		}
 		catch (RecognitionException re) {
@@ -930,7 +930,7 @@ public class SimpleCParser extends Parser {
 		public DeclStatementContext expr1;
 		public ExpressionContext expr2;
 		public AssignContext expr3;
-		public StatementContext forBlock;
+		public BlockStatementContext forBlock;
 		public DeclStatementContext declStatement() {
 			return getRuleContext(DeclStatementContext.class,0);
 		}
@@ -940,8 +940,8 @@ public class SimpleCParser extends Parser {
 		public AssignContext assign() {
 			return getRuleContext(AssignContext.class,0);
 		}
-		public StatementContext statement() {
-			return getRuleContext(StatementContext.class,0);
+		public BlockStatementContext blockStatement() {
+			return getRuleContext(BlockStatementContext.class,0);
 		}
 		public ForStatementContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -983,7 +983,7 @@ public class SimpleCParser extends Parser {
 			setState(119);
 			match(T__2);
 			setState(120);
-			((ForStatementContext)_localctx).forBlock = statement();
+			((ForStatementContext)_localctx).forBlock = blockStatement();
 			}
 		}
 		catch (RecognitionException re) {
@@ -1728,14 +1728,14 @@ public class SimpleCParser extends Parser {
 		"\u0000^\u000f\u0001\u0000\u0000\u0000_`\u0003\u000e\u0007\u0000`a\u0005"+
 		"\f\u0000\u0000a\u0011\u0001\u0000\u0000\u0000bc\u0005\r\u0000\u0000cd"+
 		"\u0005\u0001\u0000\u0000de\u0003\u001c\u000e\u0000ef\u0005\u0003\u0000"+
-		"\u0000fi\u0003\n\u0005\u0000gh\u0005\u000e\u0000\u0000hj\u0003\b\u0004"+
+		"\u0000fi\u0003\n\u0005\u0000gh\u0005\u000e\u0000\u0000hj\u0003\n\u0005"+
 		"\u0000ig\u0001\u0000\u0000\u0000ij\u0001\u0000\u0000\u0000j\u0013\u0001"+
 		"\u0000\u0000\u0000kl\u0005\u000f\u0000\u0000lm\u0005\u0001\u0000\u0000"+
-		"mn\u0003\u001c\u000e\u0000no\u0005\u0003\u0000\u0000op\u0003\b\u0004\u0000"+
+		"mn\u0003\u001c\u000e\u0000no\u0005\u0003\u0000\u0000op\u0003\n\u0005\u0000"+
 		"p\u0015\u0001\u0000\u0000\u0000qr\u0005\u0010\u0000\u0000rs\u0005\u0001"+
 		"\u0000\u0000st\u0003\f\u0006\u0000tu\u0003\u001c\u000e\u0000uv\u0005\f"+
 		"\u0000\u0000vw\u0003\u000e\u0007\u0000wx\u0005\u0003\u0000\u0000xy\u0003"+
-		"\b\u0004\u0000y\u0017\u0001\u0000\u0000\u0000z|\u0005\u0011\u0000\u0000"+
+		"\n\u0005\u0000y\u0017\u0001\u0000\u0000\u0000z|\u0005\u0011\u0000\u0000"+
 		"{}\u0003\u001c\u000e\u0000|{\u0001\u0000\u0000\u0000|}\u0001\u0000\u0000"+
 		"\u0000}~\u0001\u0000\u0000\u0000~\u007f\u0005\f\u0000\u0000\u007f\u0019"+
 		"\u0001\u0000\u0000\u0000\u0080\u0081\u0003\u001c\u000e\u0000\u0081\u0082"+

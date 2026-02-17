@@ -34,6 +34,7 @@ import antlr.SimpleCParser.ForStatementContext;
 import antlr.SimpleCParser.IfStatementContext;
 import antlr.SimpleCParser.DeclStatementContext;
 import antlr.SimpleCParser.AssignStatementContext;
+import antlr.SimpleCParser.TranslationUnitContext;
 import ir.core.IRBlock;
 import ir.core.IRFunction;
 import ir.core.IRTopLevel;
@@ -58,18 +59,21 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	SymbolTable symbolTable;
 	protected HashMap<IRBlock, Boolean> sealedBlocks;
 
+	protected BlockVisitor currentPath;
+
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
 		return builder.top;
 	}
-	
+
 	public IRBuilder() {
 		sealedBlocks = new HashMap<IRBlock, Boolean>();
 		top = new IRTopLevel();
 		symbolTable = new SymbolTable();
+		currentPath = new BlockVisitor();
 	}
-	
+
 	IRType translateType(TypeContext t) {
 		if (t instanceof IntTypeContext) {
 			return IRType.INT;
@@ -86,44 +90,57 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 
 	@Override
+	public BuilderResult visitTranslationUnit(TranslationUnitContext ctx) {
+		currentPath.enterBlock();
+		visitChildren(ctx);
+		currentPath.exitBlock();
+		return null;
+	}
+
+	@Override
 	public BuilderResult visitFunctionDefinition(FunctionDefinitionContext ctx) {
 		//We build the list of arg types
 		ArrayList<IRType> argTypes = new ArrayList<IRType>();
 		for (FunctionArgumentContext a : ctx.args) {
 			argTypes.add(translateType(a.argType));
 		}
-		
+
 		//We instantiate a new function and add it in the toplevel
 		IRFunction func = new IRFunction(ctx.name.getText(), translateType(ctx.returnType), argTypes);
 		top.addFunction(func);
-		
+
+		currentPath.enterBlock();
+
 		//We mark the newly created function as currentFunction : blocks will be added inside
 		currentFunction = func;
 		IRBlock entryBlock = createBlock(func);
-		
+
 		//Recursive call to the body to get its IR
-		BuilderResult body = visitBlockStatement(ctx.body); 
-		
+		BuilderResult body = visitBlockStatement(ctx.body);
+
 		//We connect the result with the entry block and seal the body
 		entryBlock.addTerminator(new IRGoto(body.entry));
-		
+
+		currentPath.exitBlock();
+
 		//Don't care about the value returned
 		return null;
 	}
-	
+
 	@Override
 	public BuilderResult visitStatement(StatementContext ctx) {
 		return this.visit(ctx.children.getFirst());
 	}
-	
+
 	@Override
 	public BuilderResult visitBlockStatement(BlockStatementContext ctx) {
-		
+		currentPath.enterBlock();
+
 		//We create a new block, save it as in point and current point
 		IRBlock in =  createBlock(currentFunction);
 		IRBlock current = in;
 		currentBlock = current;
-		
+
 		//Recursive call for each child
 		for (StatementContext s : ctx.statements) {
 			BuilderResult r = visit(s);
@@ -134,7 +151,8 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 				currentBlock = current;
 			}
 		}
-		
+
+		currentPath.exitBlock();
 		return new BuilderResult(true, in, current, null);
 	}
 
@@ -210,13 +228,13 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
-	
-	
+
+
 	/****************************************************************************
 	 *  Return/call statements
-	 * 
+	 *
 	 ****************************************************************************/
-	
+
 	@Override
 	public BuilderResult visitReturnStatement(ReturnStatementContext ctx) {
 		BuilderResult res = this.visit(ctx.expr);
@@ -224,9 +242,9 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		currentBlock.addOperation(newInstr);
 		return new BuilderResult(false, null, null, null);
 	}
-	
+
 	@Override
-	public BuilderResult visitFunctionCall(FunctionCallContext ctx) {	
+	public BuilderResult visitFunctionCall(FunctionCallContext ctx) {
 		//We gather arg values
 		ArrayList<IRValue> args = new ArrayList<IRValue>();
 		for (ExpressionContext a : ctx.args) {
@@ -234,37 +252,42 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			assert(res.value != null);
 			args.add(res.value);
 		}
-		
+
 		IRType returnType = IRType.UINT;
 		IRFunction func = null;
 		for (IRFunction f : top.getFunctions()) {
 			if (f.getName().equals(ctx.name.getText())) {
 				returnType = f.getReturnType();
 				func = f;
-			}	
+			}
 		}
 		IRFunctionCallInstruction funcCall = new IRFunctionCallInstruction(func, returnType, args);
 		currentBlock.addOperation(funcCall);
-				
+
 		return new BuilderResult(false, null, null, funcCall.getResult());
 	}
-	
+
 	/****************************************************************************
 	 *  Non control flow statements
-	 * 
+	 *
 	 ****************************************************************************/
 
 	// TODO A REFAIRE
 	public BuilderResult visitDeclStatement(DeclStatementContext ctx) {
-		// Rien de spécial à faire, on déclare juste l'existence de la variable
 		BuilderResult res = ctx.expr.accept(this);
+
+		this.symbolTable.getLevelTable().get(currentPath.get()).get(ctx.var.getText()).addValue(currentBlock, res.value);
 		return new BuilderResult(false, null, null, res.value);
 	}
 
 	public BuilderResult visitAssignStatement(AssignStatementContext ctx) {
-		BuilderResult res = ctx.expr.accept(this);
+		return ctx.expr.accept(this);
+	}
+
+	public BuilderResult visitAssign(SimpleCParser.AssignContext ctx) {
 		// Ajout à la table des symboles
-		//this.symbolTable.getLevelTable().get()
+		BuilderResult res = visit(ctx.expr);
+		this.symbolTable.getLevelTable().get(currentPath.get()).get(ctx.var.getText()).addValue(currentBlock, res.value);
 		return new BuilderResult(false, null, null, res.value);
 	}
 
@@ -274,7 +297,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	//TODO: varDecl / varDef / varAssign
 
 
-	
+
 	@Override
 	public BuilderResult visitAddExpr(AddExprContext ctx) {
 		BuilderResult res1 = ctx.expr1.accept(this);
@@ -282,111 +305,111 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		IRAddInstruction instr = new IRAddInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitSubExpr(SubExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 		BuilderResult res2 = ctx.expr2.accept(this);
 
 		IRSubInstruction instr = new IRSubInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitMulExpr(MulExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 		BuilderResult res2 = ctx.expr2.accept(this);
 
 		IRMulInstruction instr = new IRMulInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitDivExpr(DivExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 		BuilderResult res2 = ctx.expr2.accept(this);
 
 		IRDivInstruction instr = new IRDivInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitCmpGtExpr(CmpGtExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 		BuilderResult res2 = ctx.expr2.accept(this);
 
 		IRCompareGtInstruction instr = new IRCompareGtInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitCmpLtExpr(CmpLtExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 		BuilderResult res2 = ctx.expr2.accept(this);
 
 		IRCompareLtInstruction instr = new IRCompareLtInstruction(res1.value, res2.value);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitOppExpr(OppExprContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
 
 		IRConstantInstruction<Integer> zeroCst = new IRConstantInstruction<Integer>(IRType.INT, 0);
 		IRSubInstruction instr = new IRSubInstruction(zeroCst.getResult(), res1.value);
 		currentBlock.addOperation(zeroCst);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
+
 	@Override
 	public BuilderResult visitExprNode(ExprNodeContext ctx) {
-		
+
 		BuilderResult res1 = ctx.expr1.accept(this);
-		
+
 		return new BuilderResult(false, null, null, res1.value);
 	}
-	
+
 	@Override
 	public BuilderResult visitIntNode(IntNodeContext ctx) {
 		Integer val = Integer.parseInt(ctx.children.get(0).getText());
 		IRConstantInstruction<Integer> instr = new IRConstantInstruction<Integer>(IRType.INT, val);
 		currentBlock.addOperation(instr);
-		
+
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
-	
 
-	
+
+
 	@Override
 	public BuilderResult visitIdNode(IdNodeContext ctx) {
 		//Key function for having SSA working properly
 		SymbolTableEntry entry = symbolTable.lookup(ctx.name.getText());
 		IRValue val = null; //TODO: find the correct value in SSA form
 
-		return new BuilderResult(false, null, null, val);	
+		return new BuilderResult(false, null, null, val);
 	}
-	
+
 	@Override
 	public BuilderResult visitExpressionStatement(SimpleCParser.ExpressionStatementContext ctx) {
 		return visit(ctx.expr);
@@ -395,6 +418,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	private IRBlock createBlock(IRFunction f) {
 		return f.addBlock();
 	}
-	
+
 }
 
