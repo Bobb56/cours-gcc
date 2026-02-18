@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import ir.terminator.IRCondBr;
-import ir.terminator.IRTerminator;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import antlr.SimpleCBaseVisitor;
@@ -85,7 +84,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 
 	protected void seal(IRBlock b) {
-		// TODO: seal blocks au bon moment
 		sealedBlocks.put(b, true);
 	}
 
@@ -120,6 +118,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		//We connect the result with the entry block and seal the body
 		entryBlock.addTerminator(new IRGoto(body.entry));
+		seal(body.entry);
 
 		currentPath.exitBlock();
 
@@ -147,6 +146,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			if (r.hasBlock) {
 				//We have to insert blocks from recursive call
 				current.addTerminator(new IRGoto(r.entry));
+				seal(r.entry);
 				current = r.exit;
 				currentBlock = current;
 			}
@@ -165,12 +165,14 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		BuilderResult exprResult = this.visit(ctx.expr);
 		BuilderResult whileResult = this.visit(ctx.whileBlock);
 
-		IRCondBr condTerm = new IRCondBr(exprResult.value, whileResult.entry, outBlock);
-		inBlock.addTerminator(condTerm);
-
 		// whileBlock is currentBlock
 		currentBlock.addTerminator(new IRGoto(inBlock));
 
+		IRCondBr condTerm = new IRCondBr(exprResult.value, whileResult.entry, outBlock);
+		inBlock.addTerminator(condTerm);
+
+		seal(currentBlock);	// whileBlock
+		seal(outBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
 
@@ -182,22 +184,27 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		BuilderResult exprResult = this.visit(ctx.expr);
 		BuilderResult ifResult = this.visit(ctx.ifBlock);
-		IRBlock ifBlock = currentBlock;
+		// thenBlock is currentBlock
+		IRBlock thenBlock = currentBlock;
+		thenBlock.addTerminator(new IRGoto(outBlock));
 
 		if(ctx.elseBlock != null) {
 			BuilderResult elseResult = this.visit(ctx.elseBlock);
 			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, elseResult.entry);
 			inBlock.addTerminator(condTerm);
+			seal(thenBlock);
+
 			// elseBlock is currentBlock
 			currentBlock.addTerminator(new IRGoto(outBlock));
+			seal(currentBlock);
 		}
 		else {
 			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, outBlock);
 			inBlock.addTerminator(condTerm);
+			seal(thenBlock);
 		}
 
-		ifBlock.addTerminator(new IRGoto(outBlock));
-
+		seal(outBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
 
@@ -209,12 +216,15 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		// DeclStatement
 		this.visit(ctx.expr1);
+		inBlock.addTerminator(new IRGoto(condBlock));
 
 		// Now we switch to condBlock
 		currentBlock = condBlock;
 		BuilderResult exprResult = this.visit(ctx.expr2);
 
 		BuilderResult forResult = this.visit(ctx.forBlock);
+		// forBlock is currentBlock
+		currentBlock.addTerminator(new IRGoto(condBlock));
 
 		// Incrementation
 		this.visit(ctx.expr3);
@@ -222,10 +232,9 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		IRCondBr condTerm = new IRCondBr(exprResult.value, forResult.entry, outBlock);
 		condBlock.addTerminator(condTerm);
 
-		// forBlock is currentBlock
-		currentBlock.addTerminator(new IRGoto(condBlock));
-		inBlock.addTerminator(new IRGoto(condBlock));
-
+		seal(currentBlock);	// forBlock
+		seal(outBlock);
+		seal(condBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
 
@@ -272,7 +281,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	 *
 	 ****************************************************************************/
 
-	// TODO A REFAIRE
 	public BuilderResult visitDeclStatement(DeclStatementContext ctx) {
 		BuilderResult res = ctx.expr.accept(this);
 
