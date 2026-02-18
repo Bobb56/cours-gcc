@@ -3,6 +3,7 @@ package compiler.frontend;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import ir.core.*;
 import ir.terminator.IRCondBr;
 import org.antlr.v4.runtime.tree.ParseTree;
 
@@ -34,11 +35,6 @@ import antlr.SimpleCParser.IfStatementContext;
 import antlr.SimpleCParser.DeclStatementContext;
 import antlr.SimpleCParser.AssignStatementContext;
 import antlr.SimpleCParser.TranslationUnitContext;
-import ir.core.IRBlock;
-import ir.core.IRFunction;
-import ir.core.IRTopLevel;
-import ir.core.IRType;
-import ir.core.IRValue;
 import ir.instruction.IRAddInstruction;
 import ir.instruction.IRCompareGtInstruction;
 import ir.instruction.IRCompareLtInstruction;
@@ -411,9 +407,9 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitIdNode(IdNodeContext ctx) {
-		//Key function for having SSA working properly
+		// TODO Key function for having SSA working properly
 		SymbolTableEntry entry = symbolTable.lookup(ctx.name.getText());
-		IRValue val = null; //TODO: find the correct value in SSA form
+		IRValue val = new IRValue(IRType.INT, new IRConstantInstruction<Number>(IRType.INT, 42));
 
 		return new BuilderResult(false, null, null, val);
 	}

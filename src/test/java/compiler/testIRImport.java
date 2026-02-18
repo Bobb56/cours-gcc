@@ -2,6 +2,8 @@ package compiler;
 
 
 import compiler.frontend.IRBuilder;
+import ir.core.IRTopLevel;
+import ir.importExport.IRExport;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.jupiter.api.Test;
 
@@ -15,10 +17,9 @@ class testIRImport {
 		ParseTree tree = Compiler.parse(contentInit);
 		System.out.println("Parsed !");
 
-		IRBuilder builder = new IRBuilder();
-		builder.visit(tree);
-
-		assert(true); // TODO
+		IRTopLevel ir = IRBuilder.buildTopLevel(tree);
+		String exported = Compiler.exportIR(ir);
+		System.out.println(exported);
 	}
 	
 	@Test
