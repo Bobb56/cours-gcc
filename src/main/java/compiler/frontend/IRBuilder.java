@@ -156,8 +156,8 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitWhileStatement(WhileStatementContext ctx) {
-		IRBlock inBlock = new IRBlock(currentFunction);
-		IRBlock outBlock = new IRBlock(currentFunction);
+		IRBlock inBlock = currentFunction.addBlock();
+		IRBlock outBlock = currentFunction.addBlock();
 		currentBlock = inBlock;
 
 		BuilderResult exprResult = this.visit(ctx.expr);
@@ -176,8 +176,8 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitIfStatement(IfStatementContext ctx) {
-		IRBlock inBlock = new IRBlock(currentFunction);
-		IRBlock outBlock = new IRBlock(currentFunction);
+		IRBlock inBlock = currentFunction.addBlock();
+		IRBlock outBlock = currentFunction.addBlock();
 		currentBlock = inBlock;
 
 		BuilderResult exprResult = this.visit(ctx.expr);
@@ -207,9 +207,9 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	}
 
 	public BuilderResult visitForStatement(ForStatementContext ctx) {
-		IRBlock inBlock = new IRBlock(currentFunction);
-		IRBlock condBlock = new IRBlock(currentFunction);
-		IRBlock outBlock = new IRBlock(currentFunction);
+		IRBlock inBlock = currentFunction.addBlock();
+		IRBlock condBlock = currentFunction.addBlock();
+		IRBlock outBlock = currentFunction.addBlock();
 		currentBlock = inBlock;
 
 		// DeclStatement
