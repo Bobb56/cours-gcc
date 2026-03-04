@@ -54,8 +54,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	SymbolTable symbolTable;
 	protected HashMap<IRBlock, Boolean> sealedBlocks;
 
-	protected BlockVisitor currentPath;
-
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
@@ -65,8 +63,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	public IRBuilder() {
 		sealedBlocks = new HashMap<IRBlock, Boolean>();
 		top = new IRTopLevel();
-		symbolTable = new SymbolTable();
-		currentPath = new BlockVisitor();
+		symbolTable = null;
 	}
 
 	IRType translateType(TypeContext t) {
@@ -85,9 +82,14 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitTranslationUnit(TranslationUnitContext ctx) {
-		currentPath.enterBlock();
+		SymbolChecker symbolChecker = new SymbolChecker();
+		symbolChecker.visit(ctx);
+
+		this.symbolTable = symbolChecker.getTable();
+
+		symbolTable.enterIRBlock();
 		visitChildren(ctx);
-		currentPath.exitBlock();
+		symbolTable.exitIRBlock();
 		return null;
 	}
 
@@ -103,7 +105,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		IRFunction func = new IRFunction(ctx.name.getText(), translateType(ctx.returnType), argTypes);
 		top.addFunction(func);
 
-		currentPath.enterBlock();
+		symbolTable.enterIRBlock();
 
 		//We mark the newly created function as currentFunction : blocks will be added inside
 		currentFunction = func;
@@ -116,7 +118,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		entryBlock.addTerminator(new IRGoto(body.entry));
 		seal(body.entry);
 
-		currentPath.exitBlock();
+		symbolTable.exitIRBlock();
 
 		//Don't care about the value returned
 		return null;
@@ -129,7 +131,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitBlockStatement(BlockStatementContext ctx) {
-		currentPath.enterBlock();
+		symbolTable.enterIRBlock();
 
 		//We create a new block, save it as in point and current point
 		IRBlock in =  createBlock(currentFunction);
@@ -148,7 +150,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			}
 		}
 
-		currentPath.exitBlock();
+		symbolTable.exitIRBlock();
 		return new BuilderResult(true, in, current, null);
 	}
 
@@ -279,8 +281,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	public BuilderResult visitDeclStatement(DeclStatementContext ctx) {
 		BuilderResult res = ctx.expr.accept(this);
-
-		this.symbolTable.getLevelTable().get(currentPath.get()).get(ctx.var.getText()).addValue(currentBlock, res.value);
+		this.symbolTable.lookup(ctx.var.getText()).addValue(currentBlock, res.value);
 		return new BuilderResult(false, null, null, res.value);
 	}
 
@@ -291,7 +292,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	public BuilderResult visitAssign(SimpleCParser.AssignContext ctx) {
 		// Ajout à la table des symboles
 		BuilderResult res = visit(ctx.expr);
-		this.symbolTable.getLevelTable().get(currentPath.get()).get(ctx.var.getText()).addValue(currentBlock, res.value);
+		this.symbolTable.lookup(ctx.var.getText()).addValue(currentBlock, res.value);
 		return new BuilderResult(false, null, null, res.value);
 	}
 

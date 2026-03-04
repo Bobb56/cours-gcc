@@ -25,6 +25,8 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
         for (ParseTree c : ctx.children)
             curState = (curState && this.visit(c));
         symbolTable.finalizeScope();
+
+        symbolTable.resetVisitor();
         return curState;
     }
 

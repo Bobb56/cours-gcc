@@ -26,7 +26,20 @@ public class SymbolTable {
 		levelTable = new HashMap<List<Integer>, SymbolTableLevel>();
 		currentPath = new BlockVisitor();
 	}
-	
+
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		result.append("{");
+
+		for (Map.Entry<List<Integer>, SymbolTableLevel> entry : levelTable.entrySet()) {
+			result.append(entry.getKey().toString()).append(" : ").append(entry.getValue().toString()).append(", ");
+		}
+
+		result.append("}");
+		return result.toString();
+	}
+
 	public SymbolTableLevel initializeScope(ParserRuleContext ctx) {
 		currentPath.enterBlock();
 		levelTable.put(currentPath.copy(), new SymbolTableLevel());
@@ -52,8 +65,9 @@ public class SymbolTable {
 
 			if (level != null) {
 				ret = level.get(name);
-				if (ret != null)
+				if (ret != null) {
 					return ret;
+				}
 			}
 		}
 		return null;
@@ -61,6 +75,18 @@ public class SymbolTable {
 
 	public HashMap<List<Integer>, SymbolTableLevel> getLevelTable() {
 		return levelTable;
+	}
+
+	public void enterIRBlock() {
+		currentPath.enterBlock();
+	}
+
+	public void exitIRBlock() {
+		currentPath.exitBlock();
+	}
+
+	public void resetVisitor() {
+		currentPath = new BlockVisitor();
 	}
 	
 }
