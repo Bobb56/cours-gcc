@@ -78,6 +78,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	protected void seal(IRBlock b) {
 		sealedBlocks.put(b, true);
+		// TODO: ajouter la résolution de la liste des pendingPhis
 	}
 
 	@Override
@@ -296,13 +297,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		return new BuilderResult(false, null, null, res.value);
 	}
 
-	// DefStatement ??
-
-
-	//TODO: varDecl / varDef / varAssign
-
-
-
 	@Override
 	public BuilderResult visitAddExpr(AddExprContext ctx) {
 		BuilderResult res1 = ctx.expr1.accept(this);
@@ -437,23 +431,16 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 					return findSSAValueRec(block.getPredecessors().getFirst(), varname);
 				}
 				else {
-					// on parcourt tous les prédécesseurs pour récupérer la valeur de la variable
-					ArrayList<IRValue> values = new ArrayList<IRValue>();
-					for (IRBlock pred : block.getPredecessors()) {
-						values.add(findSSAValueRec(pred, varname));
-					}
-
 					// on crée un phi du type de la variable
-					IRPhiOperation phi = new IRPhiOperation(values.getFirst().getType());
+					IRPhiOperation phi = new IRPhiOperation(translateType(symbolTable.lookup(varname).type));
 
-					// on ajoute chaque valeur récupérée dans les blocs précédents aux opérandes du phi
-					for (IRValue predVal : values) {
-						phi.addOperand(predVal);
+					for (IRBlock pred : block.getPredecessors()) {
+						// on ajoute chaque valeur récupérée dans les blocs précédents aux opérandes du phi
+						phi.addOperand(findSSAValueRec(pred, varname));
 					}
 
 					// ajout du phi au bloc
 					block.addOperation(phi);
-
 					// mise à jour de la valeur de la variable dans la table des symboles
 					symbolTable.lookup(varname).addValue(block, phi.getResult());
 
@@ -462,6 +449,12 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			}
 			else {
 				// le bloc n'a pas été seal
+				IRPhiOperation phi = new IRPhiOperation(translateType(symbolTable.lookup(varname).type));
+				block.addOperation(phi);
+				symbolTable.lookup(varname).addValue(block, phi.getResult());
+				block.addPendingPhi(phi);
+
+				return phi.getResult();
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 package compiler.frontend;
 
+import antlr.SimpleCParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.*;
@@ -50,9 +51,9 @@ public class SymbolTable {
 		currentPath.exitBlock();
 	}
 	
-	public SymbolTableEntry insert(String name) {
+	public SymbolTableEntry insert(String name, SimpleCParser.TypeContext type) {
 		SymbolTableLevel level = levelTable.get(currentPath.get());
-		SymbolTableEntry entry = new SymbolTableEntry(name);
+		SymbolTableEntry entry = new SymbolTableEntry(name, type);
 		level.put(name, entry);
 		return entry;
 	}

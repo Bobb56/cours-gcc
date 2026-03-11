@@ -31,7 +31,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     }
 
     public Boolean visitFunctionDefinition(SimpleCParser.FunctionDefinitionContext ctx) {
-        symbolTable.insert(ctx.name.getText());
+        symbolTable.insert(ctx.name.getText(), ctx.returnType);
 
         boolean curState = true;
         symbolTable.initializeScope(ctx);
@@ -45,7 +45,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     }
 
     public Boolean visitFunctionArgument(SimpleCParser.FunctionArgumentContext ctx) {
-        symbolTable.insert(ctx.name.getText());
+        symbolTable.insert(ctx.name.getText(), ctx.argType);
         return true;
     }
 
@@ -161,7 +161,7 @@ public class SymbolChecker extends SimpleCBaseVisitor<Boolean> {
     @Override
     public Boolean visitDeclStatement(SimpleCParser.DeclStatementContext ctx) {
         // varType présent si nécessaire
-        symbolTable.insert(ctx.var.getText());
+        symbolTable.insert(ctx.var.getText(), ctx.varType);
         return this.visit(ctx.expr);
     }
 
