@@ -14,12 +14,15 @@ public class IRBlock implements IRVisitableObject<Object> {
      * !< List of predecessors in the control flow graph. Built automatically when
      * calling addTerminator() on a block
      */
+
+    private final List<IRPhiOperation> pendingPhis;
     
     public IRFunction containingFunction;
 
     public IRBlock(IRFunction f) {
         operations = new ArrayList<>();
         predecessors = new ArrayList<>();
+        pendingPhis = new ArrayList<>();
         containingFunction = f;
     }
     
@@ -68,6 +71,10 @@ public class IRBlock implements IRVisitableObject<Object> {
 
     public List<IROperation> getOperations() {
         return operations;
+    }
+
+    public void addPendingPhi(IRPhiOperation phi) {
+        pendingPhis.add(phi);
     }
     
     public int getBlockIndexInContainingFunc() {

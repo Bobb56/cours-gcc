@@ -397,7 +397,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	@Override
 	public BuilderResult visitIntNode(IntNodeContext ctx) {
-		Integer val = Integer.parseInt(ctx.children.get(0).getText());
+		Integer val = Integer.parseInt(ctx.children.getFirst().getText());
 		IRConstantInstruction<Integer> instr = new IRConstantInstruction<Integer>(IRType.INT, val);
 		currentBlock.addOperation(instr);
 
@@ -422,6 +422,48 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 	private IRBlock createBlock(IRFunction f) {
 		return f.addBlock();
+	}
+
+	public IRValue findSSAValueRec(IRBlock block, String varname) {
+		IRValue val = symbolTable.lookup(varname).values.get(block);
+		if (val != null) {
+			// la variable a été écrite dans le bloc
+			return val;
+		}
+		else {
+			if (sealedBlocks.get(block)) {
+				// le bloc a été seal
+				if (block.getPredecessors().size() == 1) {
+					return findSSAValueRec(block.getPredecessors().getFirst(), varname);
+				}
+				else {
+					// on parcourt tous les prédécesseurs pour récupérer la valeur de la variable
+					ArrayList<IRValue> values = new ArrayList<IRValue>();
+					for (IRBlock pred : block.getPredecessors()) {
+						values.add(findSSAValueRec(pred, varname));
+					}
+
+					// on crée un phi du type de la variable
+					IRPhiOperation phi = new IRPhiOperation(values.getFirst().getType());
+
+					// on ajoute chaque valeur récupérée dans les blocs précédents aux opérandes du phi
+					for (IRValue predVal : values) {
+						phi.addOperand(predVal);
+					}
+
+					// ajout du phi au bloc
+					block.addOperation(phi);
+
+					// mise à jour de la valeur de la variable dans la table des symboles
+					symbolTable.lookup(varname).addValue(block, phi.getResult());
+
+					return phi.getResult();
+				}
+			}
+			else {
+				// le bloc n'a pas été seal
+			}
+		}
 	}
 
 }
