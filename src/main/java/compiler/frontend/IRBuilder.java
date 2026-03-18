@@ -80,6 +80,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	protected void seal(IRBlock b) {
 		sealedBlocks.put(b, true);
 		// TODO: ajouter la résolution de la liste des pendingPhis
+
 		for (Map.Entry<IRPhiOperation, String> phi : b.getPendingPhis().entrySet()) {
 			for (IRBlock pred : b.getPredecessors()) {
 				phi.getKey().addOperand(findSSAValueRec(pred, phi.getValue()));
@@ -114,17 +115,22 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		symbolTable.enterIRBlock();
 
-		int i=0;
-		for (FunctionArgumentContext a : ctx.args) {
-			symbolTable.lookup(a.name.getText()).addValue(currentBlock, func.getArgs().get(i));
-			i++;
-		}
-
 		//We mark the newly created function as currentFunction : blocks will be added inside
 		currentFunction = func;
 
+		IRBlock entryBlock = createBlock(func);
+		currentBlock = entryBlock;
+		int i=0;
+		for (FunctionArgumentContext a : ctx.args) {
+			symbolTable.insert(a.name.getText(), a.type()).addValue(entryBlock, func.getArgs().get(i));
+			i++;
+		}
+		seal(entryBlock);
+
 		//Recursive call to the body to get its IR
 		BuilderResult body = visitBlockStatement(ctx.body);
+
+		entryBlock.addTerminator(new IRGoto(body.entry));
 
 		//We connect the result with the entry block and seal the body
 		seal(body.entry);
