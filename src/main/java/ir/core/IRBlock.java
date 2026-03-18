@@ -1,6 +1,7 @@
 package ir.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import ir.terminator.IRTerminator;
@@ -15,15 +16,19 @@ public class IRBlock implements IRVisitableObject<Object> {
      * calling addTerminator() on a block
      */
 
-    private final List<IRPhiOperation> pendingPhis;
+    private final HashMap<IRPhiOperation, String> pendingPhis;
     
     public IRFunction containingFunction;
 
     public IRBlock(IRFunction f) {
         operations = new ArrayList<>();
         predecessors = new ArrayList<>();
-        pendingPhis = new ArrayList<>();
+        pendingPhis = new HashMap<IRPhiOperation, String>();
         containingFunction = f;
+    }
+
+    public HashMap<IRPhiOperation, String> getPendingPhis() {
+        return pendingPhis;
     }
     
     public void deleteContainingFunction() {
@@ -73,8 +78,8 @@ public class IRBlock implements IRVisitableObject<Object> {
         return operations;
     }
 
-    public void addPendingPhi(IRPhiOperation phi) {
-        pendingPhis.add(phi);
+    public void addPendingPhi(IRPhiOperation phi, String varname) {
+        pendingPhis.put(phi, varname);
     }
     
     public int getBlockIndexInContainingFunc() {

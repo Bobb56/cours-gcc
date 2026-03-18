@@ -2,6 +2,7 @@ package compiler.frontend;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import ir.core.*;
 import ir.terminator.IRCondBr;
@@ -79,6 +80,11 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	protected void seal(IRBlock b) {
 		sealedBlocks.put(b, true);
 		// TODO: ajouter la résolution de la liste des pendingPhis
+		for (Map.Entry<IRPhiOperation, String> phi : b.getPendingPhis().entrySet()) {
+			for (IRBlock pred : b.getPredecessors()) {
+				phi.getKey().addOperand(findSSAValueRec(pred, phi.getValue()));
+			}
+		}
 	}
 
 	@Override
@@ -398,14 +404,9 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		return new BuilderResult(false, null, null, instr.getResult());
 	}
 
-
-
 	@Override
 	public BuilderResult visitIdNode(IdNodeContext ctx) {
-		// TODO Key function for having SSA working properly
-		SymbolTableEntry entry = symbolTable.lookup(ctx.name.getText());
-		IRValue val = new IRValue(IRType.INT, new IRConstantInstruction<Number>(IRType.INT, 42));
-
+		IRValue val = findSSAValueRec(currentBlock, ctx.name.getText());
 		return new BuilderResult(false, null, null, val);
 	}
 
@@ -425,7 +426,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			return val;
 		}
 		else {
-			if (sealedBlocks.get(block)) {
+			if (sealedBlocks.get(block) != null) {
 				// le bloc a été seal
 				if (block.getPredecessors().size() == 1) {
 					return findSSAValueRec(block.getPredecessors().getFirst(), varname);
@@ -452,7 +453,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 				IRPhiOperation phi = new IRPhiOperation(translateType(symbolTable.lookup(varname).type));
 				block.addOperation(phi);
 				symbolTable.lookup(varname).addValue(block, phi.getResult());
-				block.addPendingPhi(phi);
+				block.addPendingPhi(phi, varname);
 
 				return phi.getResult();
 			}
