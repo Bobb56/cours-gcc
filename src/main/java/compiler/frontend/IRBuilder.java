@@ -114,15 +114,19 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 		symbolTable.enterIRBlock();
 
+		int i=0;
+		for (FunctionArgumentContext a : ctx.args) {
+			symbolTable.lookup(a.name.getText()).addValue(currentBlock, func.getArgs().get(i));
+			i++;
+		}
+
 		//We mark the newly created function as currentFunction : blocks will be added inside
 		currentFunction = func;
-		IRBlock entryBlock = createBlock(func);
 
 		//Recursive call to the body to get its IR
 		BuilderResult body = visitBlockStatement(ctx.body);
 
 		//We connect the result with the entry block and seal the body
-		entryBlock.addTerminator(new IRGoto(body.entry));
 		seal(body.entry);
 
 		symbolTable.exitIRBlock();
