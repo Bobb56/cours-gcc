@@ -78,6 +78,16 @@ public class IRBlock implements IRVisitableObject<Object> {
         return operations;
     }
 
+    public List<IRPhiOperation> getPhiOperations() {
+        ArrayList<IRPhiOperation> phis = new ArrayList<IRPhiOperation>();
+        for(IROperation op: this.operations){
+            if(op instanceof IRPhiOperation) {
+                phis.add((IRPhiOperation) op);
+            }
+        }
+        return phis;
+    }
+
     public void addPendingPhi(IRPhiOperation phi, String varname) {
         pendingPhis.put(phi, varname);
     }

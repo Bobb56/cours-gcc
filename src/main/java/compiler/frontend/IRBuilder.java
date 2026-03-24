@@ -1,8 +1,6 @@
 package compiler.frontend;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import ir.core.*;
 import ir.terminator.IRCondBr;
@@ -54,10 +52,12 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	IRBlock currentBlock = null;
 	SymbolTable symbolTable;
 	protected HashMap<IRBlock, Boolean> sealedBlocks;
+	protected Set<IRBlock> worklist;
 
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
+		builder.simplifyAllPhis();
 		return builder.top;
 	}
 
@@ -77,9 +77,52 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		return null;
 	}
 
+	protected void simplifyAllPhis() {
+		for(IRFunction f : this.top.getFunctions()) {
+			simplifyFunctionPhis(f);
+		}
+	}
+
+	private void simplifyFunctionPhis(IRFunction f) {
+		boolean stop = false;
+		// If one loop has not modified any blocks, then stop
+		while(!stop) {
+			stop = true;
+			// Going through all blocks
+			for(IRBlock block : f.getBlocks()) {
+				ArrayList<IROperation> toRemove = new ArrayList<IROperation>();
+
+				// Going through all IRPhiOperations
+				for(IROperation operation : block.getOperations()){
+					if(operation instanceof IRPhiOperation){
+						IRValue firstOperand = operation.getOperands().getFirst();
+						boolean toSimplify = true;
+
+						// Going through all operands of the current IRPhiOperation
+						for(IRValue operand : operation.getOperands()) {
+							if(operand != firstOperand){
+								toSimplify = false;
+								break;
+							}
+						}
+						if(toSimplify){
+							operation.getResult().replaceBy(firstOperand);
+							stop = false;
+							toRemove.add(operation);
+						}
+					}
+				}
+				// Removing all simplified phis
+				for(IROperation op : toRemove){
+					block.removeOperation(op);
+				}
+			}
+		}
+	}
+
+
 	protected void seal(IRBlock b) {
 		sealedBlocks.put(b, true);
-		// TODO: ajouter la résolution de la liste des pendingPhis
 
 		for (Map.Entry<IRPhiOperation, String> phi : b.getPendingPhis().entrySet()) {
 			for (IRBlock pred : b.getPredecessors()) {
