@@ -61,4 +61,9 @@ class testIRImport {
 	void testParserPrint() {
 		testPattern("src/test/resources/print.sc");
 	}
+
+	@Test
+	void testAlu() {
+		testPattern("src/test/resources/alu_test.sc");
+	}
 }

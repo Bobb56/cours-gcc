@@ -57,7 +57,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
-		builder.simplifyAllPhis();
+		// builder.simplifyAllPhis();
 		return builder.top;
 	}
 
