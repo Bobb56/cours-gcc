@@ -1,7 +1,9 @@
 int factorial(int n) {
     int result = 1;
     while (n > 0) {
-        result = result * n;
+        for (int i=0 ; i < n ; i=i+1) {
+            result = result + result;
+        }
         n = n - 1;
     }
     return result;

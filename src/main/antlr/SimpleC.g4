@@ -44,8 +44,8 @@ expressionStatement : expr=expression ';';
 
 expression : expr1=expression '*' expr2=expression 	#MulExpr 
 		| expr1=expression '/' expr2=expression 	#DivExpr
-		| expr1=expression '+' expr2=expression  #AddExpr
-		| expr1=expression '-' expr2=expression 	#SubExpr 
+		| expr1=expression '+' expr2=expression     #AddExpr
+		| expr1=expression '-' expr2=expression 	#SubExpr
 		| expr1=expression '<' expr2=expression 	#CmpLtExpr
 		| expr1=expression '>' expr2=expression 	#CmpGtExpr
 		|'-' expr1=expression					#OppExpr
