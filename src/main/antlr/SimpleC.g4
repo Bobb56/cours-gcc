@@ -4,7 +4,7 @@ grammar SimpleC;
     package antlr;
 }
 
-IDENTIFIER : [a-zA-Z]+ [0-9a-zA-Z]*;
+IDENTIFIER : [a-zA-Z_]+ [0-9a-zA-Z_]*;
 INTEGER : '-'? [0-9]+;
 
 WS  :   ( ' ' | '\t' | '\r' '\n' | '\n' ) -> skip;

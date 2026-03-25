@@ -57,7 +57,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
-		// builder.simplifyAllPhis();
+		builder.simplifyAllPhis();
 		return builder.top;
 	}
 
@@ -241,26 +241,26 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		currentBlock = inBlock;
 
 		BuilderResult exprResult = this.visit(ctx.expr);
-		BuilderResult ifResult = this.visit(ctx.ifBlock);
+		BuilderResult thenResult = this.visit(ctx.ifBlock);
 		// thenBlock is currentBlock
 		IRBlock thenBlock = currentBlock;
 		thenBlock.addTerminator(new IRGoto(outBlock));
 
 		if(ctx.elseBlock != null) {
 			BuilderResult elseResult = this.visit(ctx.elseBlock);
-			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, elseResult.entry);
+			IRCondBr condTerm = new IRCondBr(exprResult.value, thenResult.entry, elseResult.entry);
 			inBlock.addTerminator(condTerm);
-			seal(thenBlock);
+			seal(elseResult.entry);
 
 			// elseBlock is currentBlock
 			currentBlock.addTerminator(new IRGoto(outBlock));
-			seal(currentBlock);
+			//seal(currentBlock);
 		}
 		else {
-			IRCondBr condTerm = new IRCondBr(exprResult.value, ifResult.entry, outBlock);
+			IRCondBr condTerm = new IRCondBr(exprResult.value, thenResult.entry, outBlock);
 			inBlock.addTerminator(condTerm);
-			seal(thenBlock);
 		}
+		seal(thenResult.entry);
 
 		seal(outBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
