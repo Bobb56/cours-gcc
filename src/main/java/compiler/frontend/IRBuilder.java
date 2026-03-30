@@ -58,7 +58,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 	public static IRTopLevel buildTopLevel(ParseTree t) {
 		IRBuilder builder = new IRBuilder();
 		builder.visit(t);
-		//builder.simplifyAllPhis();
+		builder.simplifyAllPhis();
 		return builder.top;
 	}
 
@@ -193,7 +193,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		IRCondBr condTerm = new IRCondBr(exprResult.value, whileResult.entry, outBlock);
 		inBlock.addTerminator(condTerm);
 
-		seal(currentBlock);	// whileBlock
+		seal(whileResult.entry);
 		seal(outBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
 	}
@@ -218,7 +218,6 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 
 			// elseBlock is currentBlock
 			currentBlock.addTerminator(new IRGoto(outBlock));
-			//seal(currentBlock);
 		}
 		else {
 			IRCondBr condTerm = new IRCondBr(exprResult.value, thenResult.entry, outBlock);
@@ -245,16 +244,17 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		BuilderResult exprResult = this.visit(ctx.expr2);
 
 		BuilderResult forResult = this.visit(ctx.forBlock);
-		// forBlock is currentBlock
-		currentBlock.addTerminator(new IRGoto(condBlock));
 
 		// Incrementation
 		this.visit(ctx.expr3);
 
+		// forBlock is currentBlock
+		currentBlock.addTerminator(new IRGoto(condBlock));
+
 		IRCondBr condTerm = new IRCondBr(exprResult.value, forResult.entry, outBlock);
 		condBlock.addTerminator(condTerm);
 
-		seal(currentBlock);	// forBlock
+		seal(forResult.entry);
 		seal(outBlock);
 		seal(condBlock);
 		return (new BuilderResult(true, inBlock, outBlock, null));
@@ -452,15 +452,16 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 					// on crée un phi du type de la variable
 					IRPhiOperation phi = new IRPhiOperation(translateType(symbolTable.lookup(varname).type));
 
+					// mise à jour de la valeur de la variable dans la table des symboles
+					symbolTable.lookup(varname).addValue(block, phi.getResult());
+
 					for (IRBlock pred : block.getPredecessors()) {
 						// on ajoute chaque valeur récupérée dans les blocs précédents aux opérandes du phi
 						phi.addOperand(findSSAValueRec(pred, varname));
 					}
 
 					// ajout du phi au bloc
-					block.addOperation(phi);
-					// mise à jour de la valeur de la variable dans la table des symboles
-					symbolTable.lookup(varname).addValue(block, phi.getResult());
+					block.addPhi(phi);
 
 					return phi.getResult();
 				}
@@ -468,7 +469,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			else {
 				// le bloc n'a pas été seal
 				IRPhiOperation phi = new IRPhiOperation(translateType(symbolTable.lookup(varname).type));
-				block.addOperation(phi);
+				block.addPhi(phi);
 				symbolTable.lookup(varname).addValue(block, phi.getResult());
 				block.addPendingPhi(phi, varname);
 

@@ -60,6 +60,11 @@ public class IRBlock implements IRVisitableObject<Object> {
         op.setContainingBlock(this);
         this.operations.add(op);
     }
+
+    public void addPhi(IRPhiOperation op) {
+        op.setContainingBlock(this);
+        this.operations.addFirst(op);
+    }
     
     public void removeOperation(IROperation op) {
     	op.setContainingBlock(null);
