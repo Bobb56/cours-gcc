@@ -207,8 +207,7 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 		BuilderResult exprResult = this.visit(ctx.expr);
 		BuilderResult thenResult = this.visit(ctx.ifBlock);
 		// thenBlock is currentBlock
-		IRBlock thenBlock = currentBlock;
-		thenBlock.addTerminator(new IRGoto(outBlock));
+		currentBlock.addTerminator(new IRGoto(outBlock));
 
 		if(ctx.elseBlock != null) {
 			BuilderResult elseResult = this.visit(ctx.elseBlock);
@@ -477,6 +476,4 @@ public class IRBuilder extends SimpleCBaseVisitor<BuilderResult> {
 			}
 		}
 	}
-
 }
-

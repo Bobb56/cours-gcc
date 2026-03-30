@@ -50,6 +50,4 @@ public abstract class DataflowAnalysis <T> {
 			}
 		}
 	}
-	
-	
 }

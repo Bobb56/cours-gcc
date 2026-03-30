@@ -8,6 +8,7 @@ import java.util.Set;
 public class PhiSimplification extends DataflowAnalysis<Integer> {
     public PhiSimplification(IRFunction f) {
         super(f);
+        VERBOSE = false;
     }
 
     @Override

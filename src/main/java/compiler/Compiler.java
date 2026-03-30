@@ -95,9 +95,5 @@ public class Compiler {
 
     	System.out.println("**** Backend : ");
     	BackendBuilder.lower(secondIr);
-
-
-
     }
-
 }
