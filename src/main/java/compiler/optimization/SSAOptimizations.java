@@ -7,7 +7,7 @@ import ir.core.IRTopLevel;
 
 import java.util.ArrayList;
 
-public abstract class SSAOptimizations {
+public abstract class SSAOptimizations<T> {
     protected ArrayList<IROperation> worklist;
 
     public SSAOptimizations(IRTopLevel topLevel) {
