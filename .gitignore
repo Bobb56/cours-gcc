@@ -8,4 +8,7 @@ build
 .project
 
 .idea/uiDesigner.xml
-
+IntelliLang.xml
+misc.xml
+copilot.data.migration.ask2agent.xml
+workspace.xml
