@@ -75,18 +75,38 @@ public class CondConstProp {
     }
 
     // This function returns the value resulting of the operation assuming it is constant
-    protected int computeConstValue(IROperation operation) {
+    protected AssignationState<Number> computeConstValue(IROperation operation) {
+        // Process phi operations
+        if(operation instanceof IRPhiOperation) {
+            Number refResult = null;
+            for(IRValue op: operation.getOperands()) {
+                Number currResult = values.get(op).getValue();
+                // If currResult is null, it's bottom
+                if(currResult != null) {
+                    if(refResult == null) {
+                        refResult = currResult;
+                    }
+                    else if (!currResult.equals(refResult)) {
+                        return new AssignationState<>();
+                    }
+                    // else: nothing to do
+                }
+            }
+        }
+
+        // Process integer operations
         int a = (Integer)values.get(operation.getOperands().getFirst()).getValue();
         int b = (Integer)values.get(operation.getOperands().getLast()).getValue();
 
         return switch (operation) {
-            case IRAddInstruction irAddInstruction -> a + b;
-            case IRSubInstruction irSubInstruction -> a - b;
-            case IRMulInstruction irMulInstruction -> a * b;
-            case IRDivInstruction irDivInstruction -> a / b;
+            case IRAddInstruction irAddInstruction -> new AssignationState<Number>(a + b);
+            case IRSubInstruction irSubInstruction -> new AssignationState<Number>(a - b);
+            case IRMulInstruction irMulInstruction -> new AssignationState<Number>(a * b);
+            case IRDivInstruction irDivInstruction -> new AssignationState<Number>(a / b);
             default -> throw new IllegalArgumentException();
         };
 
+        // TODO other cases
     }
 
     protected void updateState(IROperation op) {
@@ -108,7 +128,7 @@ public class CondConstProp {
             }
 
             if (isConstant) {
-                assignState = new AssignationState<>(computeConstValue(op));
+                assignState = computeConstValue(op);
             } else {
                 assignState = new AssignationState<>();
             }
