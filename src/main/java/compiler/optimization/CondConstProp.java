@@ -1,16 +1,18 @@
 package compiler.optimization;
 
 import ir.core.*;
+import ir.instruction.*;
 import ir.terminator.IRCondBr;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Set;
 
 
 public class CondConstProp {
     protected Set<IRBlock> blocks;
-    protected HashMap<IRValue, AssignationState<Object>> values;
+    protected HashMap<IRValue, AssignationState<Number>> values;
     protected ArrayList<IRValue> worklist_values;
     protected ArrayList<IRBlock> worklist_blocks;
 
@@ -26,6 +28,10 @@ public class CondConstProp {
             value = constValue;
         }
 
+        public AssignationState() {
+            state = State.VARIABLE;
+        }
+
         public void setVariable() {
             assert state == State.CONSTANT;
             state = State.VARIABLE;
@@ -37,6 +43,11 @@ public class CondConstProp {
 
         public boolean isConstant() {
             return state == State.CONSTANT;
+        }
+
+        public T getValue() {
+            assert state == State.CONSTANT;
+            return value;
         }
     }
 
@@ -63,23 +74,57 @@ public class CondConstProp {
         }
     }
 
+    // This function returns the value resulting of the operation assuming it is constant
+    protected int computeConstValue(IROperation operation) {
+        int a = (Integer)values.get(operation.getOperands().getFirst()).getValue();
+        int b = (Integer)values.get(operation.getOperands().getLast()).getValue();
+
+        return switch (operation) {
+            case IRAddInstruction irAddInstruction -> a + b;
+            case IRSubInstruction irSubInstruction -> a - b;
+            case IRMulInstruction irMulInstruction -> a * b;
+            case IRDivInstruction irDivInstruction -> a / b;
+            default -> throw new IllegalArgumentException();
+        };
+
+    }
+
     protected void updateState(IROperation op) {
         IRValue val = op.getResult();
-        if (values.containsKey(val)) {
 
+        AssignationState<Number> assignState;
+
+        // Check if the IRValue is constant
+        if (op instanceof IRConstantInstruction) {
+            assignState = new AssignationState<>(((IRConstantInstruction<?>) op).getValue());
         }
         else {
-            // Check if the IRValue is constant
             boolean isConstant = true;
-            for (IRValue operand: op.getOperands()) {
+            for (IRValue operand : op.getOperands()) {
                 if (values.containsKey(operand) && values.get(operand).isVariable()) {
                     isConstant = false;
+                    break;
                 }
             }
 
-
-            values.put(val, )
+            if (isConstant) {
+                assignState = new AssignationState<>(computeConstValue(op));
+            } else {
+                assignState = new AssignationState<>();
+            }
         }
+
+        // If the value is in the hashmap, updating the state, if not, inserting a new state
+        if (values.containsKey(val)) {
+            AssignationState<Number> old_state = values.get(val);
+            if (assignState.isVariable() || (old_state.isConstant() && !Objects.equals(assignState.getValue(), old_state.getValue()))) {
+                old_state.setVariable();
+            }
+        }
+        else {
+            values.put(val, assignState);
+        }
+
     }
 
     protected void optimize_block(IRBlock b) {
@@ -97,7 +142,7 @@ public class CondConstProp {
             IRValue val = op.getResult();
             if (!worklist_values.contains(val)) {
                 worklist_values.add(val);
-                updateState(op)
+                updateState(op);
 
             }
 
