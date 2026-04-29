@@ -2,6 +2,7 @@ package compiler;
 
 
 import compiler.frontend.IRBuilder;
+import compiler.optimization.CondConstProp;
 import compiler.optimization.DeadCodeElimination;
 import ir.core.IRTopLevel;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -17,13 +18,20 @@ class testOptimizations {
 
 		IRTopLevel ir = IRBuilder.buildTopLevel(tree);
 		/////// Optimizations
-		DeadCodeElimination opti1 = new DeadCodeElimination(ir);
-		opti1.runOptimization();
+		// DeadCodeElimination opti1 = new DeadCodeElimination(ir);
+		// opti1.runOptimization();
+		CondConstProp optiCondConst = new CondConstProp(ir);
+		optiCondConst.runOptimization();
 		///////
 		String exported = Compiler.exportIR(ir);
 		System.out.println(exported);
 	}
-	
+
+	@Test
+	void testElementaryTest() {
+		testPattern("src/test/resources/elementary_test.sc");
+	}
+
 	@Test
 	void testOptiTest() {
 		testPattern("src/test/resources/opti_test.sc");

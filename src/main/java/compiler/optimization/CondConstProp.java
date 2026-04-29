@@ -49,6 +49,15 @@ public class CondConstProp {
             assert state == State.CONSTANT;
             return value;
         }
+
+        public String toString() {
+            if(this.isConstant()) {
+                return this.getValue().toString();
+            }
+            else {
+                return "T";
+            }
+        }
     }
 
     public CondConstProp(IRTopLevel topLevel) {
@@ -65,12 +74,27 @@ public class CondConstProp {
         while(!this.worklist_values.isEmpty() && !this.worklist_blocks.isEmpty()) {
             while (!this.worklist_blocks.isEmpty()) {
                 IRBlock b = this.worklist_blocks.removeFirst();
-                optimize_block(b);
+                optimizeBlock(b);
             }
             while (!this.worklist_values.isEmpty()) {
                 IRValue v = worklist_values.removeFirst();
-                optimize_value(v);
+                optimizeValue(v);
             }
+        }
+        printStates();
+    }
+
+    protected void printStates() {
+        System.out.println("##### BLOCKS :");
+        for (IRBlock b: blocks) {
+            System.out.println(b);
+        }
+
+        System.out.println("##### VALUES :");
+        for (HashMap.Entry<IRValue, AssignationState<Number>> entry : values.entrySet()) {
+            IRValue key = entry.getKey();
+            AssignationState<Number> val = entry.getValue();
+            System.out.println(key + " : " + val);
         }
     }
 
@@ -86,12 +110,14 @@ public class CondConstProp {
                     if(refResult == null) {
                         refResult = currResult;
                     }
-                    else if (!currResult.equals(refResult)) {
+                    else if (!currResult.equals(refResult) && isExec(op)) {
                         return new AssignationState<>();
                     }
                     // else: nothing to do
                 }
             }
+            assert (refResult != null);
+            return new AssignationState<Number>(refResult);
         }
 
         // Process integer operations
@@ -105,8 +131,10 @@ public class CondConstProp {
             case IRDivInstruction irDivInstruction -> new AssignationState<Number>(a / b);
             default -> throw new IllegalArgumentException();
         };
+    }
 
-        // TODO other cases
+    protected boolean isExec(IRValue op) {
+        return blocks.contains(op.getDefiningOperation().getContainingBlock());
     }
 
     protected void updateState(IROperation op) {
@@ -114,23 +142,30 @@ public class CondConstProp {
 
         AssignationState<Number> assignState;
 
-        // Check if the IRValue is constant
-        if (op instanceof IRConstantInstruction) {
-            assignState = new AssignationState<>(((IRConstantInstruction<?>) op).getValue());
-        }
-        else {
-            boolean isConstant = true;
-            for (IRValue operand : op.getOperands()) {
-                if (values.containsKey(operand) && values.get(operand).isVariable()) {
-                    isConstant = false;
-                    break;
-                }
-            }
+        // Call and Load instructions
+        if(op instanceof IRFunctionCallInstruction || op instanceof IRLoadInstruction)
+            // No isExec because it's in the worklist only if the block is executable
+            assignState = new AssignationState<>();
 
-            if (isConstant) {
-                assignState = computeConstValue(op);
+        // Other instructions
+        else {
+            // Check if the IRValue is constant
+            if (op instanceof IRConstantInstruction) {
+                assignState = new AssignationState<>(((IRConstantInstruction<?>) op).getValue());
             } else {
-                assignState = new AssignationState<>();
+                boolean isConstant = true;
+                for (IRValue operand : op.getOperands()) {
+                    if (isExec(operand) && values.containsKey(operand) && values.get(operand).isVariable()) {
+                        isConstant = false;
+                        break;
+                    }
+                }
+
+                if (isConstant) {
+                    assignState = computeConstValue(op);
+                } else {
+                    assignState = new AssignationState<>();
+                }
             }
         }
 
@@ -144,18 +179,19 @@ public class CondConstProp {
         else {
             values.put(val, assignState);
         }
-
     }
 
-    protected void optimize_block(IRBlock b) {
+    protected void setExecBlock(IRBlock b){
+        worklist_blocks.add(b);
+        blocks.add(b);
+    }
+
+    protected void optimizeBlock(IRBlock b) {
         // Adding chain of unique successors
         IRBlock pred = b;
         while (pred.getSuccessors().size() == 1) {
             pred = pred.getPredecessors().getFirst();
-            // Marking the block as executable
-            blocks.add(pred);
-            // Adding block to worklist
-            worklist_blocks.add(pred);
+            setExecBlock(pred);
         }
 
         for (IROperation op: b.getOperations()) {
@@ -163,18 +199,25 @@ public class CondConstProp {
             if (!worklist_values.contains(val)) {
                 worklist_values.add(val);
                 updateState(op);
-
             }
 
             if (op instanceof IRCondBr) {
-
+                AssignationState<Number> currState = values.get(op.getOperands().getFirst());
+                if(currState != null && currState.isConstant()) {
+                    if(currState.getValue().intValue() != 0) {
+                        setExecBlock(((IRCondBr) op).getSuccessors().getFirst());
+                    }
+                    else {
+                        setExecBlock(((IRCondBr) op).getSuccessors().getLast());
+                    }
+                }
             }
         }
     }
 
 
-    protected void optimize_value(IRValue v) {
-
+    protected void optimizeValue(IRValue v) {
+       updateState(v.getDefiningOperation());
     }
 
 }
