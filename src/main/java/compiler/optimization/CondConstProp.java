@@ -1,17 +1,15 @@
 package compiler.optimization;
 
+import com.ibm.icu.impl.CollectionSet;
 import ir.core.*;
 import ir.instruction.*;
 import ir.terminator.IRCondBr;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 
 public class CondConstProp {
-    protected Set<IRBlock> blocks;
+    protected HashSet<IRBlock> blocks;
     protected HashMap<IRValue, AssignationState<Number>> values;
     protected ArrayList<IRValue> worklist_values;
     protected ArrayList<IRBlock> worklist_blocks;
@@ -33,7 +31,6 @@ public class CondConstProp {
         }
 
         public void setVariable() {
-            assert state == State.CONSTANT;
             state = State.VARIABLE;
         }
 
@@ -64,14 +61,23 @@ public class CondConstProp {
         worklist_values = new ArrayList<IRValue>();
         worklist_blocks = new ArrayList<IRBlock>();
 
+        blocks = new HashSet<IRBlock>();
+        values = new HashMap<IRValue, AssignationState<Number>>();
+
         for(IRFunction f: topLevel.getFunctions()) {
-            worklist_blocks.add(f.getBlocks().getFirst());
-            blocks.add(f.getBlocks().getFirst());
+            if (!f.getBlocks().isEmpty()) {
+                worklist_blocks.add(f.getBlocks().getFirst());
+                blocks.add(f.getBlocks().getFirst());
+            }
+            for (IRValue arg : f.getArgs()) {
+                values.put(arg, new AssignationState<Number>());
+            }
         }
     }
 
     public void runOptimization() {
-        while(!this.worklist_values.isEmpty() && !this.worklist_blocks.isEmpty()) {
+        while(!this.worklist_values.isEmpty() || !this.worklist_blocks.isEmpty()) {
+            printStates();
             while (!this.worklist_blocks.isEmpty()) {
                 IRBlock b = this.worklist_blocks.removeFirst();
                 optimizeBlock(b);
@@ -85,9 +91,10 @@ public class CondConstProp {
     }
 
     protected void printStates() {
+        System.out.println("---------- STATE -------------");
         System.out.println("##### BLOCKS :");
         for (IRBlock b: blocks) {
-            System.out.println(b);
+            System.out.println("Block " + b.getBlockIndexInContainingFunc());
         }
 
         System.out.println("##### VALUES :");
@@ -96,6 +103,7 @@ public class CondConstProp {
             AssignationState<Number> val = entry.getValue();
             System.out.println(key + " : " + val);
         }
+        System.out.println("---------- END STATE -------------");
     }
 
     // This function returns the value resulting of the operation assuming it is constant
@@ -120,6 +128,8 @@ public class CondConstProp {
             return new AssignationState<Number>(refResult);
         }
 
+        System.out.println("OPERATION : " + operation);
+        printStates();
         // Process integer operations
         int a = (Integer)values.get(operation.getOperands().getFirst()).getValue();
         int b = (Integer)values.get(operation.getOperands().getLast()).getValue();
@@ -129,12 +139,17 @@ public class CondConstProp {
             case IRSubInstruction irSubInstruction -> new AssignationState<Number>(a - b);
             case IRMulInstruction irMulInstruction -> new AssignationState<Number>(a * b);
             case IRDivInstruction irDivInstruction -> new AssignationState<Number>(a / b);
-            default -> throw new IllegalArgumentException();
+            case IRCompareLtInstruction irCompareLtInstruction -> new AssignationState<Number>((a < b) ? 1 : 0);
+            case IRCompareGtInstruction irCompareGtInstruction -> new AssignationState<Number>((a > b) ? 1 : 0);
+            default -> {
+                System.out.println(operation) ; throw new IllegalArgumentException();
+            }
         };
     }
 
+
     protected boolean isExec(IRValue op) {
-        return blocks.contains(op.getDefiningOperation().getContainingBlock());
+        return op.getDefiningOperation() == null || blocks.contains(op.getDefiningOperation().getContainingBlock());
     }
 
     protected void updateState(IROperation op) {
@@ -143,7 +158,10 @@ public class CondConstProp {
         AssignationState<Number> assignState;
 
         // Call and Load instructions
-        if(op instanceof IRFunctionCallInstruction || op instanceof IRLoadInstruction)
+        if (op.getOperands().isEmpty() && !(op instanceof IRConstantInstruction)) {
+            return;
+        }
+        else if(op instanceof IRFunctionCallInstruction || op instanceof IRLoadInstruction)
             // No isExec because it's in the worklist only if the block is executable
             assignState = new AssignationState<>();
 
@@ -151,6 +169,7 @@ public class CondConstProp {
         else {
             // Check if the IRValue is constant
             if (op instanceof IRConstantInstruction) {
+                System.out.println("Traitement inst const");
                 assignState = new AssignationState<>(((IRConstantInstruction<?>) op).getValue());
             } else {
                 boolean isConstant = true;
@@ -189,14 +208,14 @@ public class CondConstProp {
     protected void optimizeBlock(IRBlock b) {
         // Adding chain of unique successors
         IRBlock pred = b;
-        while (pred.getSuccessors().size() == 1) {
-            pred = pred.getPredecessors().getFirst();
+        while (!pred.getOperations().isEmpty() && pred.getSuccessors().size() == 1) {
+            pred = pred.getSuccessors().getFirst();
             setExecBlock(pred);
         }
 
         for (IROperation op: b.getOperations()) {
             IRValue val = op.getResult();
-            if (!worklist_values.contains(val)) {
+            if (val != null && !worklist_values.contains(val)) {
                 worklist_values.add(val);
                 updateState(op);
             }
@@ -211,13 +230,17 @@ public class CondConstProp {
                         setExecBlock(((IRCondBr) op).getSuccessors().getLast());
                     }
                 }
+                else {
+                    setExecBlock(((IRCondBr) op).getSuccessors().getFirst());
+                    setExecBlock(((IRCondBr) op).getSuccessors().getLast());
+                }
             }
         }
     }
 
 
     protected void optimizeValue(IRValue v) {
-       updateState(v.getDefiningOperation());
+        updateState(v.getDefiningOperation());
     }
 
 }

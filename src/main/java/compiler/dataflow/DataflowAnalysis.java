@@ -38,7 +38,6 @@ public abstract class DataflowAnalysis <T> {
 		int step = 0;
 		while (!worklist.isEmpty()) {
 			IRBlock b = worklist.removeFirst();
-			System.out.println("PROPAGATE " + b);
 			propagate(b);
 		}
 		

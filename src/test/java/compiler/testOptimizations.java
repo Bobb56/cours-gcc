@@ -20,11 +20,12 @@ class testOptimizations {
 		/////// Optimizations
 		// DeadCodeElimination opti1 = new DeadCodeElimination(ir);
 		// opti1.runOptimization();
+		String exported = Compiler.exportIR(ir);
+		System.out.println(exported);
+
 		CondConstProp optiCondConst = new CondConstProp(ir);
 		optiCondConst.runOptimization();
 		///////
-		String exported = Compiler.exportIR(ir);
-		System.out.println(exported);
 	}
 
 	@Test
