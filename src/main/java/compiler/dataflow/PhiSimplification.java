@@ -41,11 +41,12 @@ public class PhiSimplification extends DataflowAnalysis<Integer> {
                     }
                 }
 
-                if (toSimplify){
+                if (toSimplify) {
                     // Adding all blocks where the value is used in the worklist
                     for (IROperation use : operation.getResult().getUses()) {
-                        if (!worklist.contains(use.getContainingBlock()))
+                        if (!worklist.contains(use.getContainingBlock())) {
                             worklist.add(use.getContainingBlock());
+                        }
                     }
 
                     operation.getResult().replaceBy(firstOperand);
@@ -55,6 +56,9 @@ public class PhiSimplification extends DataflowAnalysis<Integer> {
         }
         // Removing all simplified phis
         for(IROperation op : toRemove){
+            for (IRValue operand : op.getOperands()) {
+                operand.removeUse(op);
+            }
             block.removeOperation(op);
         }
     }
