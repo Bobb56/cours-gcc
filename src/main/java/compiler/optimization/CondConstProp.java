@@ -109,19 +109,20 @@ public class CondConstProp {
     // This function returns the value resulting of the operation assuming it is constant
     protected AssignationState<Number> computeConstValue(IROperation operation) {
         // Process phi operations
-        if(operation instanceof IRPhiOperation) {
+        if (operation instanceof IRPhiOperation) {
             Number refResult = null;
             for(IRValue op: operation.getOperands()) {
-                Number currResult = values.get(op).getValue();
-                // If currResult is null, it's bottom
-                if(currResult != null) {
-                    if(refResult == null) {
-                        refResult = currResult;
+                if (values.get(op) != null) {
+                    Number currResult = values.get(op).getValue();
+                    // If currResult is null, it's bottom
+                    if (currResult != null) {
+                        if (refResult == null) {
+                            refResult = currResult;
+                        } else if (!currResult.equals(refResult) && isExec(op)) {
+                            return new AssignationState<>();
+                        }
+                        // else: nothing to do
                     }
-                    else if (!currResult.equals(refResult) && isExec(op)) {
-                        return new AssignationState<>();
-                    }
-                    // else: nothing to do
                 }
             }
             assert (refResult != null);
@@ -191,17 +192,21 @@ public class CondConstProp {
         // If the value is in the hashmap, updating the state, if not, inserting a new state
         if (values.containsKey(val)) {
             AssignationState<Number> old_state = values.get(val);
-            if (assignState.isVariable() || (old_state.isConstant() && !Objects.equals(assignState.getValue(), old_state.getValue()))) {
+            if ((assignState.isVariable() && old_state.isConstant()) || (old_state.isConstant() && !Objects.equals(assignState.getValue(), old_state.getValue()))) {
                 old_state.setVariable();
+                worklist_blocks.add(op.getContainingBlock());
             }
         }
         else {
             values.put(val, assignState);
+            worklist_blocks.add(op.getContainingBlock());
         }
     }
 
     protected void setExecBlock(IRBlock b){
-        worklist_blocks.add(b);
+        if (!blocks.contains(b)) {
+            worklist_blocks.add(b);
+        }
         blocks.add(b);
     }
 
@@ -211,6 +216,7 @@ public class CondConstProp {
         while (!pred.getOperations().isEmpty() && pred.getSuccessors().size() == 1) {
             pred = pred.getSuccessors().getFirst();
             setExecBlock(pred);
+            worklist_blocks.add(pred);
         }
 
         for (IROperation op: b.getOperations()) {
@@ -237,7 +243,6 @@ public class CondConstProp {
             }
         }
     }
-
 
     protected void optimizeValue(IRValue v) {
         updateState(v.getDefiningOperation());
