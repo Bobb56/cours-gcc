@@ -252,30 +252,58 @@ public class CondConstProp {
     }
 
     protected void propagateConst() {
+        // Function -> List of Numbers
+        // Number -> List of IRValues
+        HashMap<Number, ArrayList<IRValue>> constValues = new HashMap<>();
+        // For each IRFunction, we store all the constant values used in it
+        HashMap<IRFunction, ArrayList<Number>> valuesInFunctions = new HashMap<>();
+        // For each IRValue, we store the IRFunction in which it is defined
+        HashMap<IRValue, IRFunction> functions = new HashMap<>();
+
         for (Map.Entry<IRValue, AssignationState<Number>> entry : values.entrySet()) {
-            IRValue currKey = entry.getKey();
-            if(entry.getValue().isConstant()) {
-                IROperation definingOp = currKey.getDefiningOperation();
-                IRBlock containingBlock = definingOp.getContainingBlock();
-                List<IROperation> operations = containingBlock.getOperations();
+            AssignationState<Number> assignationState = entry.getValue();
+            if (assignationState.isConstant()) {
+                Number constValue = assignationState.getValue();
+                if (!constValues.containsKey(constValue))
+                    constValues.put(constValue, new ArrayList<>());
 
-                // We create a new constant operation in order to replace the defining operation of the constant value
-                IROperation newConst = new IRConstantInstruction<Integer>(IRType.INT, (Integer)entry.getValue().getValue());
-                // Set the containing block of the instruction
-                newConst.setContainingBlock(containingBlock);
-                // We replace the value by the result of the new const operation
-                currKey.replaceBy(newConst.getResult());
+                IRFunction containingFunc = entry.getKey().getDefiningOperation().getContainingBlock().containingFunction;
 
-                // We replace the old operation by the const operation
-                operations.set(operations.indexOf(definingOp), newConst);
+                if (!valuesInFunctions.containsKey(containingFunc))
+                    valuesInFunctions.put(containingFunc, new ArrayList<>());
 
-                // The instruction is no longer used so we remove the use of the operands too
-                for (IRValue operand : definingOp.getOperands()) {
-                    operand.removeUse(definingOp);
+                valuesInFunctions.get(containingFunc).add(constValue);
+                constValues.get(constValue).add(entry.getKey());
+                functions.put(entry.getKey(), containingFunc);
+            }
+        }
+
+        for (IRFunction func : valuesInFunctions.keySet()) {
+            for (Number constValue : constValues.keySet()) {
+                // Creating a new operation for this contant in this function
+                IROperation newConst = new IRConstantInstruction<Integer>(IRType.INT, (Integer)constValue);
+                func.getBlocks().getFirst().insertOperation(newConst);
+
+                // Replacing values and deleting the instructions that define them
+                for (IRValue irVal : constValues.get(constValue)) {
+                    IROperation definingOp = irVal.getDefiningOperation();
+                    // If the IRValue is in this function
+                    if (functions.get(irVal) == func) {
+                        // Replacing values by the constant value
+                        irVal.replaceBy(newConst.getResult());
+                        // Deleting the instruction
+                        definingOp.getContainingBlock().removeOperation(definingOp);
+                        // The instruction is no longer used so we remove the use of the operands too
+                        for (IRValue operand : definingOp.getOperands()) {
+                            operand.removeUse(definingOp);
+                        }
+                    }
                 }
             }
         }
     }
+
+
 
     protected void removeUnusedBlocks() {
         for (IRFunction f : topLevel.getFunctions()) {
