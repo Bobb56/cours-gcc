@@ -38,12 +38,21 @@ public class MergeBlocks {
 
                     if(pred.getSuccessors().size() == 1) {
                         assert(pred.getSuccessors().getFirst() == b);
-                        // Remove Goto block to remove
+                        // Remove Goto from predecessor
                         pred.removeTerminator();
                         // Move all operations from the current block to the predecessor and remove goto
                         for (IROperation operation : new ArrayList<>(b.getOperations())) {
+                            if (operation instanceof IRTerminator) {
+                                continue;
+                            }
                             b.removeOperation(operation);
                             pred.addOperation(operation);
+                        }
+                        // Properly transfer the terminator
+                        if (!b.getOperations().isEmpty() && b.getOperations().getLast() instanceof IRTerminator) {
+                            IRTerminator terminator = (IRTerminator) b.getOperations().getLast();
+                            b.removeTerminator();
+                            pred.addTerminator(terminator);
                         }
                         toRemove.add(b);
                     }

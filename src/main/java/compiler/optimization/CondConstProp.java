@@ -1,14 +1,12 @@
 package compiler.optimization;
 
-import com.ibm.icu.impl.CollectionSet;
 import ir.core.*;
 import ir.instruction.*;
 import ir.terminator.IRCondBr;
 import ir.terminator.IRGoto;
+import ir.terminator.IRTerminator;
 
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
-
 
 public class CondConstProp {
     protected HashSet<IRBlock> blocks;
@@ -83,7 +81,6 @@ public class CondConstProp {
     public void runOptimization() {
         while(!this.worklist_values.isEmpty() || !this.worklist_blocks.isEmpty()) {
             while (!this.worklist_blocks.isEmpty()) {
-                // printStates();
                 IRBlock b = this.worklist_blocks.removeFirst();
                 optimizeBlock(b);
             }
@@ -95,7 +92,6 @@ public class CondConstProp {
         printStates();
         propagateConst();
         removeUnusedBlocks();
-        System.out.println("END OPTIMIZATIONS");
     }
 
     protected void printStates() {
@@ -197,18 +193,21 @@ public class CondConstProp {
             AssignationState<Number> old_state = values.get(val);
             if ((assignState.isVariable() && old_state.isConstant()) || (old_state.isConstant() && !Objects.equals(assignState.getValue(), old_state.getValue()))) {
                 old_state.setVariable();
-                worklist_blocks.add(op.getContainingBlock());
+                if(!worklist_blocks.contains(op.getContainingBlock()))
+                    worklist_blocks.add(op.getContainingBlock());
             }
         }
         else {
             values.put(val, assignState);
-            worklist_blocks.add(op.getContainingBlock());
+            if(!worklist_blocks.contains(op.getContainingBlock()))
+                worklist_blocks.add(op.getContainingBlock());
         }
     }
 
     protected void setExecBlock(IRBlock b){
         if (!blocks.contains(b)) {
-            worklist_blocks.add(b);
+            if(!worklist_blocks.contains(b))
+                worklist_blocks.add(b);
         }
         blocks.add(b);
     }
@@ -219,7 +218,8 @@ public class CondConstProp {
         while (!pred.getOperations().isEmpty() && pred.getSuccessors().size() == 1) {
             pred = pred.getSuccessors().getFirst();
             setExecBlock(pred);
-            worklist_blocks.add(pred);
+            if(!worklist_blocks.contains(pred))
+                worklist_blocks.add(pred);
         }
 
         for (IROperation op: b.getOperations()) {
@@ -303,8 +303,6 @@ public class CondConstProp {
         }
     }
 
-
-
     protected void removeUnusedBlocks() {
         for (IRFunction f : topLevel.getFunctions()) {
             ArrayList<IRBlock> toRemove = new ArrayList<IRBlock>();
@@ -313,6 +311,10 @@ public class CondConstProp {
                 if (!blocks.contains(b)) {
                     // Remove references to this block in the predecessors
                     for (IRBlock pred : new ArrayList<>(b.getPredecessors())) {
+                        // Skip if predecessor has no terminator (already processed)
+                        if (pred.getOperations().isEmpty() || !(pred.getOperations().getLast() instanceof IRTerminator)) {
+                            continue;
+                        }
                         // If CondBr, replacing with a Goto to the other block
                         if (pred.getTerminator() instanceof IRCondBr) {
                             IRBlock newBlock = (pred.getTerminator().getSuccessors().getFirst() != b) ? pred.getTerminator().getSuccessors().getFirst() : pred.getTerminator().getSuccessors().getLast();
@@ -324,7 +326,9 @@ public class CondConstProp {
                         }
                     }
                     // Remove terminator & block
-                    b.removeTerminator();
+                    if (!b.getOperations().isEmpty() && b.getOperations().getLast() instanceof IRTerminator) {
+                        b.removeTerminator();
+                    }
                     toRemove.add(b);
                 }
             }

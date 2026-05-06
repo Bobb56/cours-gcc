@@ -1,3 +1,13 @@
+int elementary(int a) {
+    int b = 1;
+    if (a < b) {
+        int c = 3;
+    }
+    if (b > 2) {
+        return 41;
+    }
+}
+
 int f(int n) {
     int a = 2;
     int b = 1;

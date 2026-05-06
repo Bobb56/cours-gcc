@@ -10,13 +10,16 @@ public class DeadCodeElimination extends SSAOptimizations{
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void optimize(IROperation op) {
         if (op.getResult()!=null && op.getResult().getUses().isEmpty()) {
             op.getContainingBlock().removeOperation(op);
             for(IRValue value : op.getOperands()) {
                 value.removeUse(op);
                 IROperation nextOp = value.getDefiningOperation();
-                worklist.add(nextOp);
+                if (nextOp != null) {
+                    worklist.add(nextOp);
+                }
             }
         }
     }

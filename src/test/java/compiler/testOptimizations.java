@@ -22,16 +22,15 @@ class testOptimizations {
 		String exported = Compiler.exportIR(ir);
 		System.out.println(exported);
 
-		// CondConstProp optiCondConst = new CondConstProp(ir);
-		// optiCondConst.runOptimization();
-
-		// DeadCodeElimination optiDeadCode = new DeadCodeElimination(ir);
-		// optiDeadCode.runOptimization();
-
-		// String exported2 = Compiler.exportIR(ir);
-		// System.out.println(exported2);
-
 		MergeBlocks optiMergeBlocks = new MergeBlocks(ir);
+		optiMergeBlocks.runOptimization();
+
+		CondConstProp optiCondConst = new CondConstProp(ir);
+		optiCondConst.runOptimization();
+
+		DeadCodeElimination optiDeadCode = new DeadCodeElimination(ir);
+		optiDeadCode.runOptimization();
+
 		optiMergeBlocks.runOptimization();
 
 		String exportOptimized = Compiler.exportIR(ir);
