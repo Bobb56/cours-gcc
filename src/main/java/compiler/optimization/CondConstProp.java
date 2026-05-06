@@ -7,6 +7,7 @@ import ir.terminator.IRCondBr;
 import ir.terminator.IRGoto;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class CondConstProp {
@@ -279,37 +280,28 @@ public class CondConstProp {
     protected void removeUnusedBlocks() {
         for (IRFunction f : topLevel.getFunctions()) {
             ArrayList<IRBlock> toRemove = new ArrayList<IRBlock>();
-            //for (Iterator<IRBlock> blockIter = f.getBlocks().iterator(); blockIter.hasNext();) {
             for (IRBlock b : f.getBlocks()) {
-                //IRBlock b = blockIter.next();
                 // If it's not in blocks, then it's not reachable
-                if(!blocks.contains(b)) {
+                if (!blocks.contains(b)) {
                     // Remove references to this block in the predecessors
-                    for (IRBlock pred : b.getPredecessors()) {
+                    for (IRBlock pred : new ArrayList<>(b.getPredecessors())) {
                         // If CondBr, replacing with a Goto to the other block
-                        System.out.println("Processing predecessor " + pred.getBlockIndexInContainingFunc());
-                        if(pred.getTerminator() instanceof IRCondBr) {
+                        if (pred.getTerminator() instanceof IRCondBr) {
                             IRBlock newBlock = (pred.getTerminator().getSuccessors().getFirst() != b) ? pred.getTerminator().getSuccessors().getFirst() : pred.getTerminator().getSuccessors().getLast();
-                            pred.removeTerminatorSafe();
+                            pred.removeTerminator();
                             IRGoto newTerminator = new IRGoto(newBlock);
-                            // pred.addTerminator(newTerminator);
-                            // pred.replaceTerminator(newTerminator);
-                        }
-                        else {
+                            pred.addTerminator(newTerminator);
+                        } else {
                             pred.removeTerminator();
                         }
-                        System.out.println("Processed predecessor");
                     }
                     // Remove terminator & block
                     b.removeTerminator();
                     toRemove.add(b);
-                    System.out.println("next");
                 }
             }
-            System.out.println("REMOVING BLOCKS");
             // Remove blocks
             f.deleteBlockList(toRemove);
-            System.out.println("REMOVED BLOCKS");
         }
     }
 

@@ -57,17 +57,6 @@ public class IRBlock implements IRVisitableObject<Object> {
     	this.operations.removeLast();
     }
 
-    public void removeTerminatorSafe() {
-        IROperation t = this.operations.getLast();
-        if (t instanceof IRTerminator) {
-            for (Iterator<IRBlock> blockIter = ((IRTerminator)t).getSuccessors().iterator(); blockIter.hasNext();) {
-                IRBlock b = blockIter.next();
-                b.predecessors.remove(this);
-            }
-        }
-        this.operations.removeLast();
-    }
-
     public void addOperation(IROperation op) {
         op.setContainingBlock(this);
         this.operations.add(op);
