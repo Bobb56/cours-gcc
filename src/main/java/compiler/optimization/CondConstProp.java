@@ -94,7 +94,7 @@ public class CondConstProp {
         }
         printStates();
         propagateConst();
-        //removeUnusedBlocks();
+        removeUnusedBlocks();
         System.out.println("END OPTIMIZATIONS");
     }
 

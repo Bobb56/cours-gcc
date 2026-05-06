@@ -4,6 +4,7 @@ package compiler;
 import compiler.frontend.IRBuilder;
 import compiler.optimization.CondConstProp;
 import compiler.optimization.DeadCodeElimination;
+import compiler.optimization.MergeBlocks;
 import ir.core.IRTopLevel;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.jupiter.api.Test;
@@ -21,11 +22,17 @@ class testOptimizations {
 		String exported = Compiler.exportIR(ir);
 		System.out.println(exported);
 
-		CondConstProp optiCondConst = new CondConstProp(ir);
-		optiCondConst.runOptimization();
+		// CondConstProp optiCondConst = new CondConstProp(ir);
+		// optiCondConst.runOptimization();
 
-		DeadCodeElimination opti1 = new DeadCodeElimination(ir);
-		opti1.runOptimization();
+		// DeadCodeElimination optiDeadCode = new DeadCodeElimination(ir);
+		// optiDeadCode.runOptimization();
+
+		// String exported2 = Compiler.exportIR(ir);
+		// System.out.println(exported2);
+
+		MergeBlocks optiMergeBlocks = new MergeBlocks(ir);
+		optiMergeBlocks.runOptimization();
 
 		String exportOptimized = Compiler.exportIR(ir);
 		System.out.println(exportOptimized);
