@@ -4,6 +4,7 @@ import com.ibm.icu.impl.CollectionSet;
 import ir.core.*;
 import ir.instruction.*;
 import ir.terminator.IRCondBr;
+import ir.terminator.IRGoto;
 
 import java.util.*;
 
@@ -13,6 +14,7 @@ public class CondConstProp {
     protected HashMap<IRValue, AssignationState<Number>> values;
     protected ArrayList<IRValue> worklist_values;
     protected ArrayList<IRBlock> worklist_blocks;
+    protected IRTopLevel topLevel;
 
     static protected class AssignationState<T> {
         State state;
@@ -64,6 +66,8 @@ public class CondConstProp {
         blocks = new HashSet<IRBlock>();
         values = new HashMap<IRValue, AssignationState<Number>>();
 
+        this.topLevel = topLevel;
+
         for(IRFunction f: topLevel.getFunctions()) {
             if (!f.getBlocks().isEmpty()) {
                 worklist_blocks.add(f.getBlocks().getFirst());
@@ -77,8 +81,8 @@ public class CondConstProp {
 
     public void runOptimization() {
         while(!this.worklist_values.isEmpty() || !this.worklist_blocks.isEmpty()) {
-            printStates();
             while (!this.worklist_blocks.isEmpty()) {
+                // printStates();
                 IRBlock b = this.worklist_blocks.removeFirst();
                 optimizeBlock(b);
             }
@@ -88,6 +92,9 @@ public class CondConstProp {
             }
         }
         printStates();
+//        propagateConst();
+        removeUnusedBlocks();
+        System.out.println("END OPTIMIZATIONS");
     }
 
     protected void printStates() {
@@ -129,8 +136,6 @@ public class CondConstProp {
             return new AssignationState<Number>(refResult);
         }
 
-        System.out.println("OPERATION : " + operation);
-        printStates();
         // Process integer operations
         int a = (Integer)values.get(operation.getOperands().getFirst()).getValue();
         int b = (Integer)values.get(operation.getOperands().getLast()).getValue();
@@ -142,9 +147,7 @@ public class CondConstProp {
             case IRDivInstruction irDivInstruction -> new AssignationState<Number>(a / b);
             case IRCompareLtInstruction irCompareLtInstruction -> new AssignationState<Number>((a < b) ? 1 : 0);
             case IRCompareGtInstruction irCompareGtInstruction -> new AssignationState<Number>((a > b) ? 1 : 0);
-            default -> {
-                System.out.println(operation) ; throw new IllegalArgumentException();
-            }
+            default -> throw new IllegalArgumentException();
         };
     }
 
@@ -170,7 +173,6 @@ public class CondConstProp {
         else {
             // Check if the IRValue is constant
             if (op instanceof IRConstantInstruction) {
-                System.out.println("Traitement inst const");
                 assignState = new AssignationState<>(((IRConstantInstruction<?>) op).getValue());
             } else {
                 boolean isConstant = true;
@@ -246,6 +248,59 @@ public class CondConstProp {
 
     protected void optimizeValue(IRValue v) {
         updateState(v.getDefiningOperation());
+    }
+
+    protected void propagateConst() {
+        for (Map.Entry<IRValue, AssignationState<Number>> entry : values.entrySet()) {
+            IRValue currKey = entry.getKey();
+            if(entry.getValue().isConstant()) {
+                IROperation newConst = new IRConstantInstruction<Integer>(IRType.INT, (Integer)entry.getValue().getValue());
+                // Where to add this operation?? which block?
+
+                // If the value is constant, replace each of its uses by the constant
+                for(IROperation operation : entry.getKey().getUses()) {
+                    operation.replaceOperand(currKey, newConst.getResult());
+                    // Add its uses?? Like problem that we had before??
+                }
+            }
+        }
+    }
+
+    protected void removeUnusedBlocks() {
+        for (IRFunction f : topLevel.getFunctions()) {
+            ArrayList<IRBlock> toRemove = new ArrayList<IRBlock>();
+            //for (Iterator<IRBlock> blockIter = f.getBlocks().iterator(); blockIter.hasNext();) {
+            for (IRBlock b : f.getBlocks()) {
+                //IRBlock b = blockIter.next();
+                // If it's not in blocks, then it's not reachable
+                if(!blocks.contains(b)) {
+                    // Remove references to this block in the predecessors
+                    for (IRBlock pred : b.getPredecessors()) {
+                        // If CondBr, replacing with a Goto to the other block
+                        System.out.println("Processing predecessor " + pred.getBlockIndexInContainingFunc());
+                        if(pred.getTerminator() instanceof IRCondBr) {
+                            IRBlock newBlock = (pred.getTerminator().getSuccessors().getFirst() != b) ? pred.getTerminator().getSuccessors().getFirst() : pred.getTerminator().getSuccessors().getLast();
+                            pred.removeTerminatorSafe();
+                            IRGoto newTerminator = new IRGoto(newBlock);
+                            // pred.addTerminator(newTerminator);
+                            // pred.replaceTerminator(newTerminator);
+                        }
+                        else {
+                            pred.removeTerminator();
+                        }
+                        System.out.println("Processed predecessor");
+                    }
+                    // Remove terminator & block
+                    b.removeTerminator();
+                    toRemove.add(b);
+                    System.out.println("next");
+                }
+            }
+            System.out.println("REMOVING BLOCKS");
+            // Remove blocks
+            f.deleteBlockList(toRemove);
+            System.out.println("REMOVED BLOCKS");
+        }
     }
 
 }

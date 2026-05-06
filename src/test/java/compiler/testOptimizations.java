@@ -25,6 +25,9 @@ class testOptimizations {
 
 		CondConstProp optiCondConst = new CondConstProp(ir);
 		optiCondConst.runOptimization();
+
+		String exportOptimized = Compiler.exportIR(ir);
+		System.out.println(exportOptimized);
 		///////
 	}
 

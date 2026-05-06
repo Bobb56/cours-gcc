@@ -34,6 +34,15 @@ public class IRFunction implements IRVisitableObject<Object> {
     	blocks.remove(block);
     }
 
+    public void deleteBlockList(List<IRBlock> deletedBlocks) {
+        System.out.println("Blocks to delete : " + deletedBlocks);
+        blocks.removeAll(deletedBlocks);
+        for (IRBlock b : deletedBlocks) {
+            deleteBlock(b);
+            System.out.println("Delete block " + b);
+        }
+    }
+
     public String getName() {
         return name;
     }

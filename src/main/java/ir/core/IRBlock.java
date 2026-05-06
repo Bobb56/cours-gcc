@@ -2,6 +2,7 @@ package ir.core;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import ir.terminator.IRTerminator;
@@ -54,6 +55,17 @@ public class IRBlock implements IRVisitableObject<Object> {
             for (IRBlock successor: ((IRTerminator)t).getSuccessors())
                 successor.predecessors.remove(this);
     	this.operations.removeLast();
+    }
+
+    public void removeTerminatorSafe() {
+        IROperation t = this.operations.getLast();
+        if (t instanceof IRTerminator) {
+            for (Iterator<IRBlock> blockIter = ((IRTerminator)t).getSuccessors().iterator(); blockIter.hasNext();) {
+                IRBlock b = blockIter.next();
+                b.predecessors.remove(this);
+            }
+        }
+        this.operations.removeLast();
     }
 
     public void addOperation(IROperation op) {
