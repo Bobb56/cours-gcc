@@ -39,7 +39,7 @@ public abstract class IROperation implements IRVisitableObject<Object> {
         return operands;
     }
 
-    void setContainingBlock(IRBlock containingBlock) {
+    public void setContainingBlock(IRBlock containingBlock) {
         this.containingBlock = containingBlock;
     }
 

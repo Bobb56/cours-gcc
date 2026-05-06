@@ -92,8 +92,8 @@ public class CondConstProp {
             }
         }
         printStates();
-//        propagateConst();
-        removeUnusedBlocks();
+        propagateConst();
+        //removeUnusedBlocks();
         System.out.println("END OPTIMIZATIONS");
     }
 
@@ -254,13 +254,23 @@ public class CondConstProp {
         for (Map.Entry<IRValue, AssignationState<Number>> entry : values.entrySet()) {
             IRValue currKey = entry.getKey();
             if(entry.getValue().isConstant()) {
-                IROperation newConst = new IRConstantInstruction<Integer>(IRType.INT, (Integer)entry.getValue().getValue());
-                // Where to add this operation?? which block?
+                IROperation definingOp = currKey.getDefiningOperation();
+                IRBlock containingBlock = definingOp.getContainingBlock();
+                List<IROperation> operations = containingBlock.getOperations();
 
-                // If the value is constant, replace each of its uses by the constant
-                for(IROperation operation : entry.getKey().getUses()) {
-                    operation.replaceOperand(currKey, newConst.getResult());
-                    // Add its uses?? Like problem that we had before??
+                // We create a new constant operation in order to replace the defining operation of the constant value
+                IROperation newConst = new IRConstantInstruction<Integer>(IRType.INT, (Integer)entry.getValue().getValue());
+                // Set the containing block of the instruction
+                newConst.setContainingBlock(containingBlock);
+                // We replace the value by the result of the new const operation
+                currKey.replaceBy(newConst.getResult());
+
+                // We replace the old operation by the const operation
+                operations.set(operations.indexOf(definingOp), newConst);
+
+                // The instruction is no longer used so we remove the use of the operands too
+                for (IRValue operand : definingOp.getOperands()) {
+                    operand.removeUse(definingOp);
                 }
             }
         }

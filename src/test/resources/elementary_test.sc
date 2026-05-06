@@ -7,3 +7,9 @@ int elementary(int a) {
         return 41;
     }
 }
+
+int f() {
+    int b = 1;
+    int c = 1;
+    return b + c;
+}

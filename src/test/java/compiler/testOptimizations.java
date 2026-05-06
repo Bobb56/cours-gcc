@@ -18,13 +18,14 @@ class testOptimizations {
 
 		IRTopLevel ir = IRBuilder.buildTopLevel(tree);
 		/////// Optimizations
-		// DeadCodeElimination opti1 = new DeadCodeElimination(ir);
-		// opti1.runOptimization();
 		String exported = Compiler.exportIR(ir);
 		System.out.println(exported);
 
 		CondConstProp optiCondConst = new CondConstProp(ir);
 		optiCondConst.runOptimization();
+
+		DeadCodeElimination opti1 = new DeadCodeElimination(ir);
+		opti1.runOptimization();
 
 		String exportOptimized = Compiler.exportIR(ir);
 		System.out.println(exportOptimized);
