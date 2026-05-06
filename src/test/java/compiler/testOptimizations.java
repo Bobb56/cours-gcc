@@ -44,6 +44,11 @@ class testOptimizations {
 	}
 
 	@Test
+	void testPropagation() {
+		testPattern("src/test/resources/propagation.sc");
+	}
+
+	@Test
 	void testOptiTest() {
 		testPattern("src/test/resources/opti_test.sc");
 	}
